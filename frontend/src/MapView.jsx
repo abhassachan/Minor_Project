@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+  useMap,
+} from 'react-leaflet'
 
 function RecenterMap({ position }) {
   const map = useMap()
@@ -15,21 +22,28 @@ function RecenterMap({ position }) {
 
 function MapView() {
   const [position, setPosition] = useState(null)
-  const [error, setError] = useState(null)
+  const [path, setPath] = useState([])
+  const [isRunning, setIsRunning] = useState(false)
+  const [watchId, setWatchId] = useState(null)
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser')
-      return
-    }
+  const startRun = () => {
+    if (!navigator.geolocation) return
 
-    const watchId = navigator.geolocation.watchPosition(
+    setPath([]) // reset previous path
+    setIsRunning(true)
+
+    const id = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords
-        setPosition([latitude, longitude])
+        const newPos = [latitude, longitude]
+
+        setPosition(newPos)
+
+        // Add to path only if running
+        setPath((prev) => [...prev, newPos])
       },
       (err) => {
-        setError(err.message)
+        console.log(err)
       },
       {
         enableHighAccuracy: true,
@@ -38,29 +52,57 @@ function MapView() {
       }
     )
 
-    return () => navigator.geolocation.clearWatch(watchId)
-  }, [])
+    setWatchId(id)
+  }
 
-  if (error) return <p>{error}</p>
-  if (!position) return <p>Getting your location...</p>
+  const stopRun = () => {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId)
+    }
+    setIsRunning(false)
+  }
+
+  if (!position && !isRunning) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: '50px' }}>
+        <button onClick={startRun}>Start Run</button>
+      </div>
+    )
+  }
 
   return (
-    <MapContainer
-      center={position}
-      zoom={16}
-      style={{ height: '100vh', width: '100%' }}
-    >
-      <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div>
+      <MapContainer
+        center={position || [0, 0]}
+        zoom={16}
+        style={{ height: '90vh', width: '100%' }}
+      >
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      <RecenterMap position={position} />
+        {position && <RecenterMap position={position} />}
 
-      <Marker position={position}>
-        <Popup>You are here</Popup>
-      </Marker>
-    </MapContainer>
+        {position && (
+          <Marker position={position}>
+            <Popup>You are here</Popup>
+          </Marker>
+        )}
+
+        {path.length > 1 && (
+          <Polyline positions={path} color="red" />
+        )}
+      </MapContainer>
+
+      <div style={{ textAlign: 'center', padding: '10px' }}>
+        {isRunning ? (
+          <button onClick={stopRun}>Stop Run</button>
+        ) : (
+          <button onClick={startRun}>Start Run</button>
+        )}
+      </div>
+    </div>
   )
 }
 
