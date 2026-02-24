@@ -97,25 +97,57 @@ function MapView() {
     <>
       {/* Control Panel */}
       <div
-        style={{
-          position: 'absolute',
-          zIndex: 1000,
-          top: 10,
-          left: 10,
-          background: 'white',
-          padding: '10px',
-          borderRadius: '8px',
-          fontWeight: 'bold',
-        }}
-      >
+ style={{
+  position: 'absolute',
+  zIndex: 1000,
+  top: 12,
+  left: 12,
+  background: 'rgba(0, 0, 0, 0.75)',
+  color: '#ffffff',
+  padding: '12px 14px',
+  borderRadius: '12px',
+  fontSize: '16px',
+  fontWeight: '600',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+  backdropFilter: 'blur(6px)',
+}}
+>
         <div style={{ marginBottom: '6px' }}>
           Distance: {(distance / 1000).toFixed(2)} km
         </div>
 
         {!isRunning ? (
-          <button onClick={handleStart}>Start Run</button>
+          <button
+  onClick={handleStart}
+  style={{
+    marginTop: '6px',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: 'none',
+    background: '#22c55e',
+    color: 'white',
+    fontWeight: '600',
+    cursor: 'pointer',
+  }}
+>
+  Start Run
+</button>
         ) : (
-          <button onClick={handleStop}>Stop Run</button>
+          <button
+  onClick={handleStop}
+  style={{
+    marginTop: '6px',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: 'none',
+    background: '#ef4444',
+    color: 'white',
+    fontWeight: '600',
+    cursor: 'pointer',
+  }}
+>
+  Stop Run
+</button>
         )}
       </div>
 
