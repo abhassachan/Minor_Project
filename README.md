@@ -20,10 +20,6 @@ Backend: Node.js + Express
 Database: MongoDB  
 Maps & GPS: Leaflet / Browser Geolocation API  
 
-## Project Type
-Minor Project (PR1103)  
-Institute of Engineering and Technology (IET)
-
 ## Future Enhancements
 - Leaderboard system  
 - Advanced gamification  
