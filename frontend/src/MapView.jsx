@@ -45,12 +45,21 @@ function MapView() {
   const [isRunning, setIsRunning] = useState(false)
   const [duration, setDuration] = useState(0)
   const [steps, setSteps] = useState(0)
+  const [runs, setRuns] = useState([])
   const [error, setError] = useState(null)
 
   const timerRef = useRef(null)
   const lastAccelRef = useRef(0)
   const lastStepTimeRef = useRef(0)
   const isMovingRef = useRef(false)
+
+  // 🔹 LOAD SAVED RUNS
+  useEffect(() => {
+    const savedRuns = localStorage.getItem('runs')
+    if (savedRuns) {
+      setRuns(JSON.parse(savedRuns))
+    }
+  }, [])
 
   // 🔹 GPS tracking
   useEffect(() => {
@@ -101,7 +110,7 @@ function MapView() {
     return () => clearInterval(timerRef.current)
   }, [isRunning])
 
-  // 🔹 STEP DETECTION (phone sensors)
+  // 🔹 STEP DETECTION
   useEffect(() => {
     const enableMotion = async () => {
       try {
@@ -111,9 +120,7 @@ function MapView() {
         ) {
           await DeviceMotionEvent.requestPermission()
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
 
     enableMotion()
@@ -132,11 +139,8 @@ function MapView() {
       lastAccelRef.current = magnitude
 
       const now = Date.now()
-
-      // movement detection
       isMovingRef.current = magnitude > 11
 
-      // step detection
       if (diff > 0.9 && now - lastStepTimeRef.current > 300) {
         if (isRunning) {
           setSteps((s) => s + 1)
@@ -159,6 +163,23 @@ function MapView() {
 
   const handleStop = () => {
     setIsRunning(false)
+
+    // don't save very tiny runs
+    if (distance < 5) return
+
+    const newRun = {
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      distance: distance / 1000,
+      duration,
+      steps,
+      calories: Number((steps * 0.04).toFixed(1)),
+      path,
+    }
+
+    const updatedRuns = [newRun, ...runs]
+    setRuns(updatedRuns)
+    localStorage.setItem('runs', JSON.stringify(updatedRuns))
   }
 
   // 🔹 time formatting
@@ -167,6 +188,8 @@ function MapView() {
   const formattedTime = `${minutes}:${seconds
     .toString()
     .padStart(2, '0')}`
+
+  const calories = (steps * 0.04).toFixed(1)
 
   if (error) return <p>{error}</p>
   if (!position) return <p>Getting your location...</p>
@@ -202,39 +225,64 @@ function MapView() {
           Steps: {steps}
         </div>
 
+        <div style={{ marginBottom: '6px' }}>
+          Calories: {calories} kcal
+        </div>
+
         {!isRunning ? (
-          <button
-            onClick={handleStart}
-            style={{
-              marginTop: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: 'none',
-              background: '#22c55e',
-              color: 'white',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            Start Run
-          </button>
+          <button onClick={handleStart}>Start Run</button>
         ) : (
-          <button
-            onClick={handleStop}
+          <button onClick={handleStop}>Stop Run</button>
+        )}
+      </div>
+
+      {/* 🔹 RUN HISTORY PANEL */}
+      <div
+        style={{
+          position: 'absolute',
+          zIndex: 1000,
+          bottom: 12,
+          left: 12,
+          width: '260px',
+          maxHeight: '220px',
+          overflowY: 'auto',
+          background: 'rgba(0,0,0,0.75)',
+          color: '#fff',
+          padding: '12px',
+          borderRadius: '12px',
+          fontSize: '14px',
+        }}
+      >
+        <div style={{ fontWeight: '700', marginBottom: '6px' }}>
+          Run History
+        </div>
+
+        {runs.length === 0 && (
+          <div style={{ opacity: 0.7 }}>No runs yet</div>
+        )}
+
+        {runs.map((run) => (
+          <div
+            key={run.id}
             style={{
-              marginTop: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: 'none',
-              background: '#ef4444',
-              color: 'white',
-              fontWeight: '600',
-              cursor: 'pointer',
+              marginBottom: '8px',
+              paddingBottom: '6px',
+              borderBottom: '1px solid rgba(255,255,255,0.2)',
             }}
           >
-            Stop Run
-          </button>
-        )}
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              {run.date}
+            </div>
+            <div>
+              {run.distance.toFixed(2)} km •{' '}
+              {Math.floor(run.duration / 60)}:
+              {(run.duration % 60).toString().padStart(2, '0')}
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              {run.steps} steps • {run.calories} kcal
+            </div>
+          </div>
+        ))}
       </div>
 
       <MapContainer
