@@ -8,7 +8,7 @@ import {
   useMap,
 } from 'react-leaflet'
 
-// Haversine distance
+// ================= Haversine =================
 function calculateDistance(coord1, coord2) {
   const R = 6371000
   const toRad = (v) => (v * Math.PI) / 180
@@ -26,12 +26,15 @@ function calculateDistance(coord1, coord2) {
   return R * c
 }
 
-function RecenterMap({ position }) {
+// ================= Map Follow =================
+function RecenterMap({ position, isRunning }) {
   const map = useMap()
 
   useEffect(() => {
-    if (position) map.setView(position)
-  }, [position, map])
+    if (position && isRunning) {
+      map.setView(position)
+    }
+  }, [position, isRunning, map])
 
   return null
 }
@@ -47,30 +50,67 @@ function MapView() {
   const [selectedRun, setSelectedRun] = useState(null)
   const [error, setError] = useState(null)
   const [isAutoPaused, setIsAutoPaused] = useState(false)
+  const [locationFailed, setLocationFailed] = useState(false)
+
+  // ⭐ PWA
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [isInstallable, setIsInstallable] = useState(false)
+
+  // ⭐ splits
+  const [splits, setSplits] = useState([])
+  const nextSplitKmRef = useRef(1)
+  const lastSplitTimeRef = useRef(0)
 
   const timerRef = useRef(null)
   const lastAccelRef = useRef(0)
   const lastStepTimeRef = useRef(0)
   const lastMovementTimeRef = useRef(Date.now())
+  const locationTimeoutRef = useRef(null)
 
-  // Load runs
+  // ================= PWA listener =================
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+    }
+
+    window.addEventListener('beforeinstallprompt', handler)
+    return () =>
+      window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    await deferredPrompt.userChoice
+    setDeferredPrompt(null)
+  }
+
+  // ================= Load runs =================
   useEffect(() => {
     const savedRuns = localStorage.getItem('runs')
     if (savedRuns) setRuns(JSON.parse(savedRuns))
   }, [])
 
-  // GPS tracking
+  // ================= GPS =================
   useEffect(() => {
     if (!navigator.geolocation) {
       setError('Geolocation not supported')
       return
     }
 
+    locationTimeoutRef.current = setTimeout(() => {
+      setLocationFailed(true)
+    }, 20000)
+
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        clearTimeout(locationTimeoutRef.current)
+        setLocationFailed(false)
+
         const { latitude, longitude } = pos.coords
         const newPos = [latitude, longitude]
-
         setPosition(newPos)
 
         if (isRunning && !isAutoPaused) {
@@ -78,20 +118,58 @@ function MapView() {
             if (prev.length > 0) {
               const lastPoint = prev[prev.length - 1]
               const segment = calculateDistance(lastPoint, newPos)
-              setDistance((d) => d + segment)
+
+              if (segment >= 2) {
+                setDistance((d) => {
+                  const updated = d + segment
+
+                  // ⭐ split detection
+                  const km = updated / 1000
+                  if (km >= nextSplitKmRef.current) {
+                    const splitDuration =
+                      duration - lastSplitTimeRef.current
+
+                    const paceMin = Math.floor(splitDuration / 60)
+                    const paceRem = Math.floor(splitDuration % 60)
+
+                    const newSplit = {
+                      km: nextSplitKmRef.current,
+                      pace: `${paceMin}:${paceRem
+                        .toString()
+                        .padStart(2, '0')}`,
+                    }
+
+                    setSplits((s) => [...s, newSplit])
+                    lastSplitTimeRef.current = duration
+                    nextSplitKmRef.current += 1
+                  }
+
+                  return updated
+                })
+              }
             }
             return [...prev, newPos]
           })
         }
       },
-      (err) => setError(err.message),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      (err) => {
+        clearTimeout(locationTimeoutRef.current)
+        setError(err.message)
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 15000,
+        timeout: 30000,
+      }
     )
 
-    return () => navigator.geolocation.clearWatch(watchId)
-  }, [isRunning, isAutoPaused])
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+      clearTimeout(locationTimeoutRef.current)
+    }
+  }, [isRunning, isAutoPaused, duration])
 
-  // Timer with auto-pause awareness
+  // ================= Timer =================
   useEffect(() => {
     if (isRunning && !isAutoPaused) {
       timerRef.current = setInterval(() => {
@@ -104,20 +182,8 @@ function MapView() {
     return () => clearInterval(timerRef.current)
   }, [isRunning, isAutoPaused])
 
-  // Step detection + movement detection
+  // ================= Motion =================
   useEffect(() => {
-    const enableMotion = async () => {
-      try {
-        if (
-          typeof DeviceMotionEvent !== 'undefined' &&
-          typeof DeviceMotionEvent.requestPermission === 'function'
-        ) {
-          await DeviceMotionEvent.requestPermission()
-        }
-      } catch {}
-    }
-    enableMotion()
-
     const handleMotion = (event) => {
       const acc = event.accelerationIncludingGravity
       if (!acc) return
@@ -131,18 +197,15 @@ function MapView() {
 
       const now = Date.now()
 
-      // movement detection
       if (magnitude > 11) {
         lastMovementTimeRef.current = now
         if (isAutoPaused) setIsAutoPaused(false)
       }
 
-      // auto-pause if no movement for 3 seconds
       if (isRunning && now - lastMovementTimeRef.current > 3000) {
         setIsAutoPaused(true)
       }
 
-      // step detection
       if (diff > 0.9 && now - lastStepTimeRef.current > 300) {
         if (isRunning && !isAutoPaused) setSteps((s) => s + 1)
         lastStepTimeRef.current = now
@@ -153,14 +216,20 @@ function MapView() {
     return () => window.removeEventListener('devicemotion', handleMotion)
   }, [isRunning, isAutoPaused])
 
+  // ================= Controls =================
   const handleStart = () => {
     setSelectedRun(null)
     setPath([])
     setDistance(0)
     setDuration(0)
     setSteps(0)
-    setIsAutoPaused(false)
+    setSplits([])
+
+    nextSplitKmRef.current = 1
+    lastSplitTimeRef.current = 0
     lastMovementTimeRef.current = Date.now()
+
+    setIsAutoPaused(false)
     setIsRunning(true)
   }
 
@@ -178,6 +247,7 @@ function MapView() {
       steps,
       calories: Number((steps * 0.04).toFixed(1)),
       path,
+      splits,
     }
 
     const updatedRuns = [newRun, ...runs]
@@ -185,7 +255,7 @@ function MapView() {
     localStorage.setItem('runs', JSON.stringify(updatedRuns))
   }
 
-  // Time format
+  // ================= Metrics =================
   const minutes = Math.floor(duration / 60)
   const seconds = duration % 60
   const formattedTime = `${minutes}:${seconds
@@ -193,8 +263,6 @@ function MapView() {
     .padStart(2, '0')}`
 
   const calories = (steps * 0.04).toFixed(1)
-
-  // ===== Derived Metrics =====
   const distanceKm = distance / 1000
 
   let avgPace = '--:--'
@@ -218,27 +286,26 @@ function MapView() {
     livePace = `${liveMin}:${liveRem.toString().padStart(2, '0')}`
   }
 
+  const displayPath = selectedRun ? selectedRun.path : path
+
   if (error) return <p>{error}</p>
   if (!position) return <p>Getting your location...</p>
-
-  const displayPath = selectedRun ? selectedRun.path : path
 
   return (
     <>
       {/* Control Panel */}
-      <div
-        style={{
-          position: 'absolute',
-          zIndex: 1000,
-          top: 12,
-          left: 12,
-          background: 'rgba(0,0,0,0.75)',
-          color: '#fff',
-          padding: '12px 14px',
-          borderRadius: '12px',
-          fontWeight: '600',
-        }}
-      >
+      <div style={{
+        position: 'absolute',
+        zIndex: 1000,
+        top: 12,
+        left: 12,
+        background: 'rgba(0,0,0,0.75)',
+        color: '#fff',
+        padding: '12px 14px',
+        borderRadius: '12px',
+        fontWeight: '600',
+        maxWidth: 260
+      }}>
         <div>Distance: {(distance / 1000).toFixed(2)} km</div>
         <div style={{ fontFamily: 'monospace' }}>
           Duration: {formattedTime}
@@ -261,25 +328,40 @@ function MapView() {
         ) : (
           <button onClick={handleStop}>Stop Run</button>
         )}
+
+        {isInstallable && (
+          <button onClick={handleInstall}>
+            Install App
+          </button>
+        )}
+
+        {splits.length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontWeight: 700 }}>Splits</div>
+            {splits.map((s) => (
+              <div key={s.km}>
+                Km {s.km}: {s.pace}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Run History */}
-      <div
-        style={{
-          position: 'absolute',
-          zIndex: 1000,
-          bottom: 12,
-          left: 12,
-          width: '260px',
-          maxHeight: '220px',
-          overflowY: 'auto',
-          background: 'rgba(0,0,0,0.75)',
-          color: '#fff',
-          padding: '12px',
-          borderRadius: '12px',
-          fontSize: '14px',
-        }}
-      >
+      <div style={{
+        position: 'absolute',
+        zIndex: 1000,
+        bottom: 12,
+        left: 12,
+        width: '260px',
+        maxHeight: '220px',
+        overflowY: 'auto',
+        background: 'rgba(0,0,0,0.75)',
+        color: '#fff',
+        padding: '12px',
+        borderRadius: '12px',
+        fontSize: '14px',
+      }}>
         <div style={{ fontWeight: '700', marginBottom: '6px' }}>
           Run History
         </div>
@@ -297,10 +379,6 @@ function MapView() {
               paddingBottom: '6px',
               borderBottom: '1px solid rgba(255,255,255,0.2)',
               cursor: 'pointer',
-              background:
-                selectedRun?.id === run.id
-                  ? 'rgba(255,255,255,0.15)'
-                  : 'transparent',
             }}
           >
             <div style={{ fontSize: '12px', opacity: 0.8 }}>
@@ -310,9 +388,6 @@ function MapView() {
               {run.distance.toFixed(2)} km •{' '}
               {Math.floor(run.duration / 60)}:
               {(run.duration % 60).toString().padStart(2, '0')}
-            </div>
-            <div style={{ fontSize: '12px', opacity: 0.8 }}>
-              {run.steps} steps • {run.calories} kcal
             </div>
           </div>
         ))}
@@ -328,7 +403,7 @@ function MapView() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <RecenterMap position={position} />
+        <RecenterMap position={position} isRunning={isRunning} />
 
         <Marker position={position}>
           <Popup>You are here</Popup>
