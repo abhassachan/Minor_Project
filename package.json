@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.1.4"
+  }
+}

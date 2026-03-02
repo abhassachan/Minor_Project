@@ -1,0 +1,658 @@
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+  Rectangle,
+  useMap,
+} from 'react-leaflet'
+
+/* ================= CONSTANTS ================= */
+
+const CELL_SIZE = 50
+const METERS_PER_DEG_LAT = 111320
+const MIN_DISTANCE_FOR_METRICS = 0.01
+
+/* ================= HAVERSINE ================= */
+
+function calculateDistance(coord1, coord2) {
+  const R = 6371000
+  const toRad = (v) => (v * Math.PI) / 180
+  const dLat = toRad(coord2[0] - coord1[0])
+  const dLon = toRad(coord2[1] - coord1[1])
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(coord1[0])) *
+      Math.cos(toRad(coord2[0])) *
+      Math.sin(dLon / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+/* ================= TERRITORY ================= */
+
+function getCellId(lat, lng) {
+  const metersPerDegLng = METERS_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180)
+  const x = Math.floor((lat * METERS_PER_DEG_LAT) / CELL_SIZE)
+  const y = Math.floor((lng * metersPerDegLng) / CELL_SIZE)
+  return `${x}_${y}`
+}
+
+function getCellBounds(cellId) {
+  const [x, y] = cellId.split('_').map(Number)
+  const lat1 = (x * CELL_SIZE) / METERS_PER_DEG_LAT
+  const lat2 = ((x + 1) * CELL_SIZE) / METERS_PER_DEG_LAT
+  const midLat = (lat1 + lat2) / 2
+  const metersPerDegLng = METERS_PER_DEG_LAT * Math.cos((midLat * Math.PI) / 180)
+  const lng1 = (y * CELL_SIZE) / metersPerDegLng
+  const lng2 = ((y + 1) * CELL_SIZE) / metersPerDegLng
+  return [[lat1, lng1], [lat2, lng2]]
+}
+
+/* ================= MAP FOLLOW ================= */
+
+function RecenterMap({ position, isRunning }) {
+  const map = useMap()
+  useEffect(() => {
+    if (position && isRunning) map.setView(position)
+  }, [position, isRunning, map])
+  return null
+}
+
+/* ================= FORMAT HELPERS ================= */
+
+function formatPace(secPerKm) {
+  if (!secPerKm || !isFinite(secPerKm) || secPerKm <= 0) return '--:--'
+  return `${Math.floor(secPerKm / 60)}:${Math.floor(secPerKm % 60).toString().padStart(2, '0')}`
+}
+
+function formatDuration(secs) {
+  return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
+}
+
+/* ================= MAIN ================= */
+
+function MapView() {
+  const [position, setPosition] = useState(null)
+  const [path, setPath] = useState([])
+  const [distance, setDistance] = useState(0)       // in meters
+  const [isRunning, setIsRunning] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [steps, setSteps] = useState(0)
+  const [runs, setRuns] = useState([])
+  const [selectedRun, setSelectedRun] = useState(null)
+  const [error, setError] = useState(null)
+  const [isAutoPaused, setIsAutoPaused] = useState(false)
+  const [liveSpeed, setLiveSpeed] = useState(0)         // km/h
+  const [splits, setSplits] = useState([])              // { km, pace }
+  const [capturedCells, setCapturedCells] = useState(() => new Set())
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [isInstallable, setIsInstallable] = useState(false)
+  const [showIOSBanner, setShowIOSBanner] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
+
+  // Refs — avoids stale closure issues
+  const timerRef = useRef(null)
+  const lastAccelRef = useRef(0)
+  const lastStepTimeRef = useRef(0)
+  const lastMovementTimeRef = useRef(Date.now())
+  const lastGpsTimeRef = useRef(null)
+  const lastGpsPosRef = useRef(null)
+  const isRunningRef = useRef(false)
+  const isAutoPausedRef = useRef(false)
+
+  // FIX 3: Keep refs in sync with state so motion handler never reads stale values
+  useEffect(() => { isRunningRef.current = isRunning }, [isRunning])
+  useEffect(() => { isAutoPausedRef.current = isAutoPaused }, [isAutoPaused])
+
+  // Split tracking refs
+  const nextSplitKmRef = useRef(1)
+  const lastSplitTimeRef = useRef(0)
+  const distanceRef = useRef(0)
+  const durationRef = useRef(0)
+
+  // Keep distanceRef/durationRef in sync
+  useEffect(() => { distanceRef.current = distance }, [distance])
+  useEffect(() => { durationRef.current = duration }, [duration])
+
+  /* ================= PWA ================= */
+
+  useEffect(() => {
+    // Android/Chrome: beforeinstallprompt fires when installable
+    const handler = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setIsInstallable(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+
+    // iOS detection: Safari on iOS never fires beforeinstallprompt
+    // Show manual instructions banner instead
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true
+    if (isIOS && !isInStandaloneMode) {
+      setShowIOSBanner(true)
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    await deferredPrompt.userChoice
+    setDeferredPrompt(null)
+    setIsInstallable(false)
+  }
+
+  /* ================= LOAD STORAGE ================= */
+
+  useEffect(() => {
+    const savedRuns = localStorage.getItem('runs')
+    if (savedRuns) setRuns(JSON.parse(savedRuns))
+    const savedTerritory = localStorage.getItem('territory')
+    if (savedTerritory) setCapturedCells(new Set(JSON.parse(savedTerritory)))
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('territory', JSON.stringify([...capturedCells]))
+  }, [capturedCells])
+
+  /* ================= GPS ================= */
+  // FIX 2: Register watchPosition ONCE (no deps that change during a run).
+  //         Use refs to access current running state inside the callback.
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported')
+      return
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        const newPos = [latitude, longitude]
+        const now = Date.now()
+
+        setPosition(newPos)
+
+        // Territory capture
+        if (isRunningRef.current) {
+          const cellId = getCellId(latitude, longitude)
+          setCapturedCells((prev) => {
+            if (prev.has(cellId)) return prev
+            const next = new Set(prev)
+            next.add(cellId)
+            return next
+          })
+        }
+
+        // Movement + distance
+        if (isRunningRef.current && !isAutoPausedRef.current) {
+          if (lastGpsPosRef.current !== null) {
+            const segment = calculateDistance(lastGpsPosRef.current, newPos)
+            const dt = (now - lastGpsTimeRef.current) / 1000
+
+            // Live speed: needs real movement signal
+            if (dt > 0 && segment > 0.8) {
+              const speedKmh = (segment / dt) * 3.6
+              // Cap at 30 km/h — anything above is GPS jitter, not real movement
+              if (speedKmh <= 30) setLiveSpeed(speedKmh)
+            } else if (dt > 3) {
+              setLiveSpeed(0)
+            }
+
+            // Distance accumulation:
+            //   - Drop < 0.5m  → pure GPS noise (phone sitting still)
+            //   - Drop > 50m   → impossible jump / GPS glitch
+            //   - Accept 0.5m–50m → real movement including slow walking
+            if (segment >= 0.5 && segment <= 50) {
+              setDistance((d) => {
+                const newDist = d + segment
+
+                // Split pace system
+                const newDistKm = newDist / 1000
+                if (newDistKm >= nextSplitKmRef.current) {
+                  const splitKm = nextSplitKmRef.current
+                  const elapsedSecs = durationRef.current
+                  const splitDuration = elapsedSecs - lastSplitTimeRef.current
+                  setSplits((prev) => [
+                    ...prev,
+                    { km: splitKm, pace: formatPace(splitDuration) },
+                  ])
+                  lastSplitTimeRef.current = elapsedSecs
+                  nextSplitKmRef.current = splitKm + 1
+                }
+
+                return newDist
+              })
+            }
+          }
+
+          lastGpsTimeRef.current = now
+          lastGpsPosRef.current = newPos
+
+          setPath((prev) => [...prev, newPos])
+        } else if (!isRunningRef.current) {
+          // Not in a run — just update last known pos without tracking
+          lastGpsPosRef.current = newPos
+          lastGpsTimeRef.current = now
+        }
+      },
+      (err) => setError(err.message),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+    )
+
+    return () => navigator.geolocation.clearWatch(watchId)
+  }, []) // ← empty deps: registered once, uses refs internally
+
+  /* ================= TIMER ================= */
+
+  useEffect(() => {
+    if (isRunning && !isAutoPaused) {
+      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+    } else {
+      clearInterval(timerRef.current)
+    }
+    return () => clearInterval(timerRef.current)
+  }, [isRunning, isAutoPaused])
+
+  /* ================= MOTION ================= */
+  // FIX 3: Use refs so this effect never needs to re-register
+
+  useEffect(() => {
+    const handleMotion = (event) => {
+      const acc = event.accelerationIncludingGravity
+      if (!acc) return
+
+      const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2)
+      const diff = Math.abs(magnitude - lastAccelRef.current)
+      lastAccelRef.current = magnitude
+      const now = Date.now()
+
+      // Movement detection: magnitude > 12 = real body movement (not just handling phone)
+      if (magnitude > 12) {
+        lastMovementTimeRef.current = now
+        if (isAutoPausedRef.current) setIsAutoPaused(false)
+      }
+
+      // FIX 3: read from ref, not stale closure
+      if (isRunningRef.current && now - lastMovementTimeRef.current > 3000) {
+        if (!isAutoPausedRef.current) setIsAutoPaused(true)
+      }
+
+      // Step detection tuning:
+      //   diff > 2.5  — requires a stronger acceleration spike (filters out micro-jitter & phone handling)
+      //   debounce 450ms — ~133 steps/min max, realistic for running cadence
+      if (diff > 2.5 && now - lastStepTimeRef.current > 450) {
+        if (isRunningRef.current && !isAutoPausedRef.current) {
+          setSteps((s) => s + 1)
+        }
+        lastStepTimeRef.current = now
+      }
+    }
+
+    window.addEventListener('devicemotion', handleMotion)
+    return () => window.removeEventListener('devicemotion', handleMotion)
+  }, []) // ← empty deps: registered once, uses refs internally
+
+  /* ================= CONTROLS ================= */
+
+  const handleStart = () => {
+    setSelectedRun(null)
+    setPath([])
+    setDistance(0)
+    setDuration(0)
+    setSteps(0)
+    setLiveSpeed(0)
+    setSplits([])
+    setSaveMessage('')
+    lastGpsTimeRef.current = null
+    lastGpsPosRef.current = null
+    lastMovementTimeRef.current = Date.now()
+    nextSplitKmRef.current = 1
+    lastSplitTimeRef.current = 0
+    distanceRef.current = 0
+    durationRef.current = 0
+    setIsAutoPaused(false)
+    setIsRunning(true)
+  }
+
+  const handleStop = () => {
+    setIsRunning(false)
+    setIsAutoPaused(false)
+    // FIX 4: reset live speed on stop
+    setLiveSpeed(0)
+
+    // FIX 1: was silently discarding runs < 5m with no feedback
+    if (distance < 5) {
+      setSaveMessage('Run too short to save (< 5m)')
+      return
+    }
+
+    const newRun = {
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      distance: distance / 1000,
+      duration,
+      steps,
+      calories: Number((steps * 0.04).toFixed(1)),
+      path,
+      splits,
+    }
+
+    const updatedRuns = [newRun, ...runs]
+    setRuns(updatedRuns)
+    localStorage.setItem('runs', JSON.stringify(updatedRuns))
+    setSaveMessage('Run saved ✓')
+  }
+
+  /* ================= DERIVED METRICS ================= */
+
+  const distanceKm = distance / 1000
+  const calories = (steps * 0.04).toFixed(1)
+
+  const avgSpeed =
+    distanceKm >= MIN_DISTANCE_FOR_METRICS && duration > 0
+      ? distanceKm / (duration / 3600)
+      : 0
+
+  const avgPace =
+    distanceKm >= MIN_DISTANCE_FOR_METRICS && duration > 0
+      ? formatPace(duration / distanceKm)
+      : '--:--'
+
+  const livePace = liveSpeed > 0.5 ? formatPace(3600 / liveSpeed) : '--:--'
+
+  const territoryRectangles = useMemo(
+    () => [...capturedCells].map((id) => ({ id, bounds: getCellBounds(id) })),
+    [capturedCells]
+  )
+
+  const displayPath = selectedRun ? selectedRun.path : path
+  const displaySplits = selectedRun ? (selectedRun.splits || []) : splits
+
+  if (error) return <p style={{ color: 'red', padding: 16 }}>{error}</p>
+  if (!position) return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      height: '100vh', background: '#0f172a', color: '#94a3b8',
+      fontFamily: 'monospace', fontSize: 16
+    }}>
+      📡 Acquiring GPS signal…
+    </div>
+  )
+
+  /* ================= UI ================= */
+
+  const panelStyle = {
+    position: 'absolute',
+    zIndex: 1000,
+    background: 'rgba(10,15,28,0.88)',
+    backdropFilter: 'blur(12px)',
+    color: '#f1f5f9',
+    borderRadius: '14px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+  }
+
+  const metricRow = (label, value, accent) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+      <span style={{ fontSize: 11, opacity: 0.55, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color: accent || '#f1f5f9', letterSpacing: '0.02em' }}>{value}</span>
+    </div>
+  )
+
+  return (
+    <>
+      {/* ===== TOP CONTROL PANEL ===== */}
+      <div style={{ ...panelStyle, top: 12, left: 12, width: isPanelCollapsed ? 'auto' : 240 }}>
+
+        {/* ── Collapsed view: just status dot + timer + toggle ── */}
+        <div
+          onClick={() => setIsPanelCollapsed((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: isPanelCollapsed ? '10px 14px' : '12px 16px 0',
+            cursor: 'pointer', userSelect: 'none',
+          }}
+        >
+          {/* Status dot */}
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+            background: isAutoPaused ? '#f59e0b' : isRunning ? '#22c55e' : '#475569',
+            boxShadow: isRunning && !isAutoPaused ? '0 0 8px #22c55e' : 'none',
+            transition: 'all 0.3s'
+          }} />
+
+          {/* Timer always visible */}
+          <span style={{
+            fontSize: isPanelCollapsed ? 22 : 14,
+            fontWeight: 800,
+            color: isRunning && !isAutoPaused ? '#22c55e' : '#94a3b8',
+            letterSpacing: '0.05em',
+            transition: 'all 0.2s',
+            fontFamily: '"JetBrains Mono", monospace',
+          }}>
+            {formatDuration(duration)}
+          </span>
+
+          {/* Collapse toggle arrow */}
+          <span style={{
+            marginLeft: 'auto', fontSize: 12, opacity: 0.45,
+            transform: isPanelCollapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+            transition: 'transform 0.25s',
+            paddingRight: isPanelCollapsed ? 0 : 4,
+          }}>▲</span>
+        </div>
+
+        {/* ── Expanded content ── */}
+        {!isPanelCollapsed && (
+          <div style={{ padding: '10px 16px 14px' }}>
+
+            {/* Big timer */}
+            <div style={{
+              fontSize: 36, fontWeight: 800, letterSpacing: '0.05em',
+              color: isRunning && !isAutoPaused ? '#22c55e' : '#94a3b8',
+              textAlign: 'center', marginBottom: 12,
+              transition: 'color 0.3s'
+            }}>
+              {formatDuration(duration)}
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, marginBottom: 10 }}>
+              {metricRow('Distance', `${distanceKm.toFixed(2)} km`)}
+              {metricRow('Steps', steps.toLocaleString())}
+              {metricRow('Calories', `${calories} kcal`)}
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, marginBottom: 12 }}>
+              {metricRow('Avg Pace', avgPace)}
+              {metricRow('Avg Speed', `${avgSpeed.toFixed(2)} km/h`)}
+              {metricRow('Live Pace', livePace, '#4ade80')}
+              {metricRow('Live Speed', `${liveSpeed.toFixed(2)} km/h`, '#4ade80')}
+            </div>
+
+            {metricRow('Territory', `${capturedCells.size} cells`, '#60a5fa')}
+
+            {saveMessage && (
+              <div style={{
+                marginTop: 6, fontSize: 11, textAlign: 'center',
+                color: saveMessage.includes('✓') ? '#4ade80' : '#f87171',
+              }}>
+                {saveMessage}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {!isRunning ? (
+                <button onClick={handleStart} style={{
+                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '9px 0', fontFamily: 'inherit', fontWeight: 700,
+                  fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em',
+                }}>
+                  ▶ START RUN
+                </button>
+              ) : (
+                <button onClick={handleStop} style={{
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '9px 0', fontFamily: 'inherit', fontWeight: 700,
+                  fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em',
+                }}>
+                  ■ STOP RUN
+                </button>
+              )}
+              {/* Android Chrome: native install prompt button */}
+              {isInstallable && (
+                <button onClick={handleInstall} style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '8px 0', fontFamily: 'inherit', fontWeight: 700,
+                  fontSize: 12, cursor: 'pointer', letterSpacing: '0.04em'
+                }}>
+                  ⬇ Install App
+                </button>
+              )}
+
+              {/* iOS Safari: no prompt API, show manual instructions */}
+              {showIOSBanner && !isInstallable && (
+                <div style={{
+                  background: 'rgba(59,130,246,0.15)',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                  borderRadius: 8, padding: '8px 10px',
+                  fontSize: 11, lineHeight: 1.6, color: '#93c5fd',
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 2, color: '#fff' }}>
+                    📲 Install on iOS
+                  </div>
+                  <div>
+                    Tap <strong style={{color:'#fff'}}>Share ↑</strong> in Safari,
+                    then <strong style={{color:'#fff'}}>"Add to Home Screen"</strong>
+                  </div>
+                  <div
+                    onClick={() => setShowIOSBanner(false)}
+                    style={{ marginTop: 5, opacity: 0.45, cursor: 'pointer', fontSize: 10, textDecoration: 'underline' }}
+                  >
+                    Dismiss
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===== SPLITS PANEL ===== */}
+      {displaySplits.length > 0 && (
+        <div style={{ ...panelStyle, top: 12, right: 12, padding: '12px 14px', width: 160 }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.5, marginBottom: 8 }}>
+            KM Splits
+          </div>
+          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+            {displaySplits.map((s) => (
+              <div key={s.km} style={{
+                display: 'flex', justifyContent: 'space-between',
+                marginBottom: 5, fontSize: 13
+              }}>
+                <span style={{ opacity: 0.6 }}>KM {s.km}</span>
+                <span style={{ fontWeight: 700, color: '#facc15' }}>{s.pace}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== RUN HISTORY ===== */}
+      <div style={{
+        ...panelStyle,
+        bottom: 12, left: 12,
+        width: 240,
+        fontSize: 13,
+      }}>
+        {/* History header — always visible, tap to collapse */}
+        <div
+          onClick={() => setIsHistoryCollapsed((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px', cursor: 'pointer', userSelect: 'none',
+          }}
+        >
+          <span style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>
+            Run History {runs.length > 0 && `(${runs.length})`}
+          </span>
+          <span style={{
+            fontSize: 12, opacity: 0.4,
+            transform: isHistoryCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.25s',
+          }}>▲</span>
+        </div>
+
+        {!isHistoryCollapsed && (
+          <div style={{ maxHeight: 200, overflowY: 'auto', padding: '0 14px 12px' }}>
+            {runs.length === 0 && (
+              <div style={{ opacity: 0.4, fontSize: 12 }}>No runs yet</div>
+            )}
+            {runs.map((run) => (
+              <div
+                key={run.id}
+                onClick={() => setSelectedRun(selectedRun?.id === run.id ? null : run)}
+                style={{
+                  marginBottom: 8,
+                  borderBottom: '1px solid rgba(255,255,255,0.07)',
+                  cursor: 'pointer',
+                  background: selectedRun?.id === run.id ? 'rgba(34,197,94,0.08)' : 'transparent',
+                  borderRadius: 6, padding: '4px 6px',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{run.date}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {run.distance.toFixed(2)} km · {formatDuration(run.duration)}
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>
+                  {run.steps} steps · {run.calories} kcal
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ===== MAP ===== */}
+      <MapContainer center={position} zoom={16} style={{ height: '100vh', width: '100%' }}>
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <RecenterMap position={position} isRunning={isRunning} />
+
+        <Marker position={position}>
+          <Popup>You are here</Popup>
+        </Marker>
+
+        {territoryRectangles.map((cell) => (
+          <Rectangle
+            key={cell.id}
+            bounds={cell.bounds}
+            pathOptions={{ color: '#22c55e', weight: 1, fillOpacity: 0.22 }}
+          />
+        ))}
+
+        {displayPath.length > 1 && (
+          <Polyline positions={displayPath} color="#ef4444" weight={3} />
+        )}
+      </MapContainer>
+    </>
+  )
+}
+
+export default MapView

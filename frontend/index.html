@@ -1,13 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vite-project</title>
+
+    <!-- PWA: viewport — critical for mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA: manifest link — browser reads this to decide installability -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- PWA: theme color (Android Chrome address bar color) -->
+    <meta name="theme-color" content="#22c55e" />
+
+    <!-- PWA: iOS Safari specific tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RunTracker" />
+
+    <!-- PWA: iOS icons (required for iOS home screen icon) -->
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+
+    <!-- App title -->
+    <title>GPS Run Tracker</title>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Register service worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('SW registered:', reg.scope))
+            .catch((err) => console.error('SW registration failed:', err))
+        })
+      }
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
