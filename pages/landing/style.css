@@ -1,0 +1,85 @@
+/* ================================
+   TERRITORY RUN — Landing styles.css
+   ================================ */
+
+body {
+  background-color: #f5f4f0;
+  color: #1a1917;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Navbar */
+.glass-nav {
+  background: rgba(245, 244, 240, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(26, 25, 23, 0.05);
+}
+
+/* Hero */
+.hero-heading { line-height: 0.9; }
+
+/* Tactical map dark bg */
+.tactical-map { background: #0a0a0c; }
+
+/* Map grid lines */
+.map-grid-line { stroke: rgba(255, 255, 255, 0.05); }
+
+/* Neon territory pulse */
+.neon-pulse { animation: neonPulse 2s infinite alternate; }
+@keyframes neonPulse {
+  from { opacity: 0.4; filter: drop-shadow(0 0 2px currentColor); }
+  to   { opacity: 0.7; filter: drop-shadow(0 0 8px currentColor); }
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Custom cursor */
+.custom-cursor {
+  position: fixed;
+  width: 20px; height: 20px;
+  background: rgba(45, 206, 137, 0.3);
+  border: 1px solid #2dce89;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.1s ease-out, opacity 0.3s ease;
+  transform: translate(-50%, -50%);
+}
+.custom-cursor-follower {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: #2dce89;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+a, button { cursor: none; }
+
+/* Magnetic elements */
+.magnetic-element {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Particle canvas */
+#hero-particles {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Stat numbers */
+.stat-number { font-variant-numeric: tabular-nums; }

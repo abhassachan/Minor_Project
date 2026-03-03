@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Territory Run | Claim Your City</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="tailwind.config.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="antialiased overflow-x-hidden">
+
+  <!-- Custom cursor -->
+  <div class="custom-cursor" id="cursor-main"></div>
+  <div class="custom-cursor-follower" id="cursor-follower"></div>
+
+  <!-- NAVBAR -->
+  <nav class="fixed top-0 left-0 right-0 z-50 glass-nav h-20 flex items-center">
+    <div class="container mx-auto px-6 flex justify-between items-center">
+      <a class="flex items-center gap-1 text-2xl font-heading tracking-tight magnetic-element" href="#">
+        <span class="text-brand-ink">TERRITORY</span>
+        <span class="text-brand-teal">RUN</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-wider">
+        <a class="hover:text-brand-teal transition-colors magnetic-element" href="#how-it-works">How it Works</a>
+        <a class="hover:text-brand-teal transition-colors magnetic-element" href="#map">Leaderboard</a>
+        <a class="hover:text-brand-teal transition-colors magnetic-element" href="#rivals">About</a>
+      </div>
+      <a class="bg-brand-teal text-white px-6 py-2.5 rounded-full font-bold text-sm tracking-wide hover:opacity-90 transition-all flex items-center gap-2 magnetic-element"
+        href="../auth/">
+        OPEN APP <span class="text-lg">→</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="pt-40 pb-20 lg:pt-52 lg:pb-32 px-6 overflow-hidden relative">
+    <canvas id="hero-particles"></canvas>
+    <div class="container mx-auto grid lg:grid-cols-2 gap-16 items-center">
+      <div class="z-10 animate-fade-up">
+        <h1 class="hero-heading text-7xl md:text-8xl lg:text-9xl font-heading text-brand-ink mb-6">
+          RUN.<br />CAPTURE.<br />DOMINATE.
+        </h1>
+        <p class="text-xl text-brand-muted max-w-md mb-10 leading-relaxed">
+          The city is a board game. Claim map zones by running through them and become the local legend. No downloads,
+          just running.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+          <a class="bg-brand-teal text-white px-8 py-4 rounded-full font-bold text-lg text-center hover:scale-105 transition-transform magnetic-element"
+            href="../auth/">
+            Start Running — It's Free
+          </a>
+          <a class="bg-white border border-brand-ink/10 text-brand-ink px-8 py-4 rounded-full font-bold text-lg text-center hover:bg-brand-ink hover:text-white transition-all magnetic-element"
+            href="#how-it-works">
+            See how it works
+          </a>
+        </div>
+        <p class="text-sm font-mono text-brand-muted flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-brand-teal animate-pulse"></span>
+          No download needed. PWA powered.
+        </p>
+      </div>
+
+      <!-- Hero Map Visual -->
+      <div
+        class="relative w-full aspect-square max-w-[600px] mx-auto tactical-map rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+        <svg class="w-full h-full" viewBox="0 0 400 400">
+          <g class="map-grid-line">
+            <path
+              d="M0,20 L400,20 M0,40 L400,40 M0,60 L400,60 M0,80 L400,80 M0,100 L400,100 M0,120 L400,120 M0,140 L400,140 M0,160 L400,160 M0,180 L400,180 M0,200 L400,200 M0,220 L400,220 M0,240 L400,240 M0,260 L400,260 M0,280 L400,280 M0,300 L400,300 M0,320 L400,320 M0,340 L400,340 M0,360 L400,360 M0,380 L400,380" />
+            <path
+              d="M20,0 L20,400 M40,0 L40,400 M60,0 L60,400 M80,0 L80,400 M100,0 L100,400 M120,0 L120,400 M140,0 L140,400 M160,0 L160,400 M180,0 L180,400 M200,0 L200,400 M220,0 L220,400 M240,0 L240,400 M260,0 L260,400 M280,0 L280,400 M300,0 L300,400 M320,0 L320,400 M340,0 L340,400 M360,0 L360,400 M380,0 L380,400" />
+          </g>
+          <path class="neon-pulse" d="M80,80 L160,80 L160,160 L80,160 Z" fill="#2dce89" fill-opacity="0.4"
+            stroke="#2dce89" stroke-width="1" style="color:#2dce89" />
+          <path d="M220,40 L340,40 L340,120 L220,120 Z" fill="#9f7aea" fill-opacity="0.3" stroke="#9f7aea"
+            stroke-width="1" />
+          <path class="neon-pulse" d="M180,200 L320,200 L320,340 L180,340 Z" fill="#f6ad55" fill-opacity="0.4"
+            stroke="#f6ad55" stroke-width="1" style="color:#f6ad55;animation-delay:1s" />
+          <path d="M40,240 L140,240 L140,360 L40,360 Z" fill="#f56565" fill-opacity="0.3" stroke="#f56565"
+            stroke-width="1" />
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS BAR -->
+  <section class="bg-brand-ink py-12 px-6">
+    <div class="container mx-auto">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 text-white text-center">
+        <div>
+          <p class="text-3xl md:text-4xl font-mono font-bold text-brand-teal mb-1 stat-counter" data-target="12400">0
+          </p>
+          <p class="text-xs uppercase tracking-widest text-brand-muted font-bold">Runners</p>
+        </div>
+        <div>
+          <p class="text-3xl md:text-4xl font-mono font-bold text-brand-teal mb-1 stat-counter" data-target="3.2"
+            data-suffix="M">0</p>
+          <p class="text-xs uppercase tracking-widest text-brand-muted font-bold">Territories</p>
+        </div>
+        <div>
+          <p class="text-3xl md:text-4xl font-mono font-bold text-brand-teal mb-1 stat-counter" data-target="180">0</p>
+          <p class="text-xs uppercase tracking-widest text-brand-muted font-bold">Cities</p>
+        </div>
+        <div>
+          <p class="text-3xl md:text-4xl font-mono font-bold text-brand-teal mb-1">0</p>
+          <p class="text-xs uppercase tracking-widest text-brand-muted font-bold">App Downloads</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="py-24 px-6 bg-white" id="how-it-works">
+    <div class="container mx-auto">
+      <div class="text-center mb-20 reveal">
+        <h2 class="text-5xl md:text-6xl font-heading mb-4">HOW IT WORKS</h2>
+        <div class="w-20 h-1.5 bg-brand-teal mx-auto"></div>
+      </div>
+      <div class="grid md:grid-cols-3 gap-12 relative">
+        <div class="hidden md:block absolute top-1/2 left-0 w-full h-px bg-brand-ink/10 -z-0"></div>
+        <div class="relative bg-brand-offwhite p-8 rounded-2xl border border-brand-ink/5 reveal z-10"
+          style="transition-delay:0.1s">
+          <div
+            class="w-16 h-16 bg-brand-teal text-white rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg shadow-brand-teal/20">
+            🏃</div>
+          <h3 class="text-2xl font-bold mb-4">Run Your Route</h3>
+          <p class="text-brand-muted">Open the web app and start your run. Our GPS tracks your path across the city grid
+            in real-time.</p>
+        </div>
+        <div class="relative bg-brand-offwhite p-8 rounded-2xl border border-brand-ink/5 reveal z-10"
+          style="transition-delay:0.2s">
+          <div
+            class="w-16 h-16 bg-brand-ink text-white rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg shadow-brand-ink/20">
+            🚩</div>
+          <h3 class="text-2xl font-bold mb-4">Claim Territory</h3>
+          <p class="text-brand-muted">Complete loops or cover new ground to claim zones. The more you run, the larger
+            your empire grows.</p>
+        </div>
+        <div class="relative bg-brand-offwhite p-8 rounded-2xl border border-brand-ink/5 reveal z-10"
+          style="transition-delay:0.3s">
+          <div
+            class="w-16 h-16 bg-brand-teal text-white rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg shadow-brand-teal/20">
+            🏆</div>
+          <h3 class="text-2xl font-bold mb-4">Dominate the City</h3>
+          <p class="text-brand-muted">Defend your zones from rivals and rise to the top of the neighborhood leaderboard.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE MAP PREVIEW -->
+  <section class="py-24 px-6 relative overflow-hidden bg-brand-offwhite" id="map">
+    <div class="container mx-auto">
+      <div class="max-w-3xl mb-16 reveal">
+        <h2 class="text-5xl md:text-7xl font-heading mb-6 leading-tight">
+          Your city is already being claimed.<br />
+          <span class="text-brand-teal">Will you take it back?</span>
+        </h2>
+      </div>
+      <div class="relative rounded-3xl overflow-hidden shadow-2xl border-8 border-white bg-gray-200 aspect-video">
+        <div class="absolute inset-0 tactical-map"></div>
+        <div class="absolute inset-0">
+          <svg class="w-full h-full" viewBox="0 0 1000 600">
+            <defs>
+              <pattern height="40" id="grid" patternUnits="userSpaceOnUse" width="40">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect fill="url(#grid)" height="100%" width="100%" />
+            <polygon class="neon-pulse" fill="#2dce89" fill-opacity="0.4" points="150,150 450,100 500,350 200,400"
+              stroke="#2dce89" stroke-width="2" style="color:#2dce89" />
+            <polygon fill="#f6ad55" fill-opacity="0.3" points="550,300 850,250 900,500 600,550" stroke="#f6ad55"
+              stroke-width="2" />
+            <polygon fill="#9f7aea" fill-opacity="0.3" points="600,50 900,80 850,250 650,220" stroke="#9f7aea"
+              stroke-width="2" />
+          </svg>
+        </div>
+        <div
+          class="absolute top-1/3 left-1/4 -translate-x-1/2 -translate-y-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-brand-teal shadow-[0_0_15px_rgba(45,206,137,0.3)] flex items-center gap-2 text-white">
+          <div class="w-6 h-6 bg-brand-teal rounded-full flex items-center justify-center text-[10px]">RX</div>
+          <span class="text-xs font-bold tracking-wide">Runner_X owns Central Park</span>
+        </div>
+        <div
+          class="absolute bottom-1/4 right-1/4 translate-x-1/4 translate-y-1/4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-orange-400 shadow-[0_0_15px_rgba(246,173,85,0.3)] flex items-center gap-2 text-white">
+          <div class="w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center text-[10px]">SG</div>
+          <span class="text-xs font-bold tracking-wide">SpeedyG7 is claiming Midtown</span>
+        </div>
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span class="text-white/5 font-heading text-[15vw] select-none">CITY TACTICAL</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES GRID -->
+  <section class="py-24 px-6 bg-white">
+    <div class="container mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div class="p-8 border border-brand-ink/5 rounded-2xl hover:border-brand-teal transition-colors reveal"
+        style="transition-delay:0.1s">
+        <div class="text-3xl mb-4">📍</div>
+        <h4 class="text-xl font-bold mb-3">Real GPS Tracking</h4>
+        <p class="text-brand-muted text-sm">Military-grade precision to track every yard of your run with no lag.</p>
+      </div>
+      <div class="p-8 border border-brand-ink/5 rounded-2xl hover:border-brand-teal transition-colors reveal"
+        style="transition-delay:0.2s">
+        <div class="text-3xl mb-4">🏆</div>
+        <h4 class="text-xl font-bold mb-3">Leaderboards</h4>
+        <p class="text-brand-muted text-sm">Real-time ranking for your street, neighborhood, and city.</p>
+      </div>
+      <div class="p-8 border border-brand-ink/5 rounded-2xl hover:border-brand-teal transition-colors reveal"
+        style="transition-delay:0.3s">
+        <div class="text-3xl mb-4">⚡</div>
+        <h4 class="text-xl font-bold mb-3">Instant PWA</h4>
+        <p class="text-brand-muted text-sm">Add to your home screen and go. No App Store hurdles, no storage issues.</p>
+      </div>
+      <div class="p-8 border border-brand-ink/5 rounded-2xl hover:border-brand-teal transition-colors reveal"
+        style="transition-delay:0.4s">
+        <div class="text-3xl mb-4">🔥</div>
+        <h4 class="text-xl font-bold mb-3">Daily Streaks</h4>
+        <p class="text-brand-muted text-sm">Maintain your empire by running daily. Don't let your zones decay.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIVALRY SECTION -->
+  <section class="py-24 px-6 bg-brand-ink text-white" id="rivals">
+    <div class="container mx-auto">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <div class="reveal">
+          <h2 class="text-5xl md:text-7xl font-heading mb-8">THEY ARE STEALING<br />YOUR STREETS.</h2>
+          <p class="text-xl text-brand-muted mb-10 max-w-lg">
+            There are runners in your neighborhood right now claiming the zones you walk every day. It's time to take
+            them back.
+          </p>
+          <a class="inline-block bg-brand-teal text-white px-10 py-5 rounded-full font-bold text-xl hover:scale-105 transition-transform magnetic-element"
+            href="../auth/">
+            Claim Your Zone Now →
+          </a>
+        </div>
+        <div class="space-y-4 reveal" style="transition-delay:0.3s">
+          <p class="text-xs uppercase tracking-widest text-brand-muted font-bold mb-6">Nearby Rivals</p>
+          <div
+            class="bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-all">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-brand-teal flex items-center justify-center font-bold text-xl">JD
+              </div>
+              <div>
+                <h4 class="font-bold">Jack_Dash</h4>
+                <p class="text-sm text-brand-muted">Level 24 Marauder</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-mono text-brand-teal font-bold">42 Zones</p>
+              <p class="text-xs text-brand-muted">2.1mi away</p>
+            </div>
+          </div>
+          <div
+            class="bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-all">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center font-bold text-xl">SL
+              </div>
+              <div>
+                <h4 class="font-bold">SarahLegs</h4>
+                <p class="text-sm text-brand-muted">Level 19 Sprinter</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-mono text-brand-teal font-bold">28 Zones</p>
+              <p class="text-xs text-brand-muted">0.4mi away</p>
+            </div>
+          </div>
+          <div
+            class="bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-all">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center font-bold text-xl">MK
+              </div>
+              <div>
+                <h4 class="font-bold">MileKiller</h4>
+                <p class="text-sm text-brand-muted">Level 41 Conqueror</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-mono text-brand-teal font-bold">115 Zones</p>
+              <p class="text-xs text-brand-muted">1.2mi away</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-20 px-6 bg-brand-offwhite">
+    <div class="container mx-auto">
+      <div class="grid md:grid-cols-4 gap-12 mb-20">
+        <div class="col-span-2">
+          <a class="flex items-center gap-1 text-3xl font-heading tracking-tight mb-4" href="#">
+            <span class="text-brand-ink">TERRITORY</span><span class="text-brand-teal">RUN</span>
+          </a>
+          <p class="text-brand-muted max-w-xs text-lg">Turn every run into a battle. Join the global game of territory
+            conquest.</p>
+        </div>
+        <div>
+          <h5 class="font-bold mb-6 text-sm uppercase tracking-widest">Platform</h5>
+          <ul class="space-y-4 text-brand-muted font-medium">
+            <li><a class="hover:text-brand-ink transition-colors" href="#how-it-works">How it Works</a></li>
+            <li><a class="hover:text-brand-ink transition-colors" href="#map">Global Map</a></li>
+            <li><a class="hover:text-brand-ink transition-colors" href="#">Leaderboards</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5 class="font-bold mb-6 text-sm uppercase tracking-widest">Company</h5>
+          <ul class="space-y-4 text-brand-muted font-medium">
+            <li><a class="hover:text-brand-ink transition-colors" href="#">About Us</a></li>
+            <li><a class="hover:text-brand-ink transition-colors" href="#">Privacy</a></li>
+            <li><a class="hover:text-brand-ink transition-colors" href="#">Support</a></li>
+          </ul>
+        </div>
+      </div>
+      <div
+        class="pt-8 border-t border-brand-ink/5 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-brand-muted">
+        <p>&copy; 2025 Territory Run. All rights reserved.</p>
+        <div class="flex gap-8">
+          <a class="hover:text-brand-teal" href="#">Twitter</a>
+          <a class="hover:text-brand-teal" href="#">Strava</a>
+          <a class="hover:text-brand-teal" href="#">Instagram</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+
+</html>
