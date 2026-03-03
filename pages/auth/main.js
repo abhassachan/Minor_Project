@@ -2,6 +2,9 @@
    TERRITORY RUN — Auth main.js
    ================================ */
 
+// ── API BASE URL ─────────────────────────────────────
+const API_BASE = 'http://localhost:5000/api';
+
 // ── 1. TAB SWITCHING ─────────────────────────────────
 function switchTab(tab) {
     const signinForm = document.getElementById('form-signin');
@@ -98,8 +101,8 @@ if (signupPassword) {
 
         strengthLabel.textContent = val.length > 0 ? config.label : '';
         strengthLabel.className = `text-[11px] mt-1 ${strength <= 1 ? 'text-red-400' :
-                strength === 2 ? 'text-yellow-500' :
-                    strength === 3 ? 'text-blue-400' : 'text-teal-500'
+            strength === 2 ? 'text-yellow-500' :
+                strength === 3 ? 'text-blue-400' : 'text-teal-500'
             }`;
     });
 }
@@ -136,7 +139,7 @@ function isValidEmail(email) {
 
 
 // ── 6. SIGN IN VALIDATION ────────────────────────────
-document.getElementById('signin-form').addEventListener('submit', (e) => {
+document.getElementById('signin-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     let valid = true;
 
@@ -165,14 +168,45 @@ document.getElementById('signin-form').addEventListener('submit', (e) => {
 
     if (!valid) return;
 
-    // ✅ Validation passed — redirect to dashboard
-    // TODO (commit 6): replace with real API call to POST /api/auth/login
-    window.location.href = '../dashboard/dashboard.html';
+    // ✅ Validation passed — call login API
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Signing in...';
+    submitBtn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showError('signin-email-error', data.error || 'Login failed');
+            setInputError('signin-email');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
+        // Save token & user to localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        // Redirect to dashboard
+        window.location.href = '../dashboard/dashboard.html';
+    } catch (err) {
+        showError('signin-email-error', 'Cannot connect to server. Is the backend running?');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
 });
 
 
 // ── 7. SIGN UP VALIDATION ────────────────────────────
-document.getElementById('signup-form').addEventListener('submit', (e) => {
+document.getElementById('signup-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     let valid = true;
 
@@ -240,7 +274,38 @@ document.getElementById('signup-form').addEventListener('submit', (e) => {
 
     if (!valid) return;
 
-    // ✅ Validation passed — redirect to dashboard
-    // TODO (commit 6): replace with real API call to POST /api/auth/register
-    window.location.href = '../dashboard/dashboard.html';
+    // ✅ Validation passed — call register API
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Creating account...';
+    submitBtn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, username, email, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showError('signup-email-error', data.error || 'Registration failed');
+            setInputError('signup-email');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
+        // Save token & user to localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        // Redirect to dashboard
+        window.location.href = '../dashboard/dashboard.html';
+    } catch (err) {
+        showError('signup-email-error', 'Cannot connect to server. Is the backend running?');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
 });
