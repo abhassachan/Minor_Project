@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Territory Run — Join the Battle</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="tailwind.config.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="bg-background-light text-ink antialiased selection:bg-primary/30">
+
+    <div class="flex min-h-screen">
+
+        <!-- ══ LEFT: Tactical Dark Panel ══ -->
+        <div
+            class="hidden md:flex flex-1 relative bg-background-dark overflow-hidden flex-col justify-center items-center p-12 border-r border-white/5">
+            <div class="absolute inset-0 city-grid"></div>
+
+            <!-- Neon zone shapes -->
+            <div
+                class="absolute top-[15%] left-[10%] w-48 h-36 bg-primary/10 border border-primary/40 rounded-lg rotate-12 neon-glow-teal">
+            </div>
+            <div
+                class="absolute top-[45%] left-[5%] w-32 h-32 bg-pink-500/10 border border-pink-500/40 rounded-full -rotate-12 neon-glow-pink">
+            </div>
+            <div
+                class="absolute bottom-[30%] right-[5%] w-56 h-40 bg-purple-500/10 border border-purple-500/40 rounded-xl -rotate-6 neon-glow-purple">
+            </div>
+            <div
+                class="absolute top-[30%] right-[12%] w-28 h-28 bg-orange-500/10 border border-orange-500/40 rounded-lg rotate-45 neon-glow-orange">
+            </div>
+
+            <!-- Center content -->
+            <div class="relative z-10 text-center max-w-lg">
+                <a href="../landing/index.html" class="flex items-center justify-center gap-3 mb-10 group">
+                    <div class="size-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="text-background-dark size-8" fill="none" viewBox="0 0 48 48">
+                            <path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <span
+                        class="heading-bebas text-4xl tracking-widest text-white group-hover:text-primary transition-colors">Territory
+                        Run</span>
+                </a>
+
+                <h1 class="heading-bebas text-[58px] leading-[1] text-white tracking-tight mb-4 flex flex-col">
+                    <span>CLAIM YOUR</span>
+                    <span class="text-primary">CITY.</span>
+                </h1>
+                <p class="text-white/80 text-xl mb-16 font-sans font-medium tracking-wide">
+                    Every run is a battle. Every street is a trophy.
+                </p>
+
+                <!-- Stats strip -->
+                <div
+                    class="flex items-center justify-center gap-10 py-8 border-y border-white/10 bg-black/40 backdrop-blur-md px-10 rounded-2xl">
+                    <div class="text-center">
+                        <p class="data-mono text-primary text-2xl font-bold">180+</p>
+                        <p class="text-white/50 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Cities</p>
+                    </div>
+                    <div class="w-px h-10 bg-white/10"></div>
+                    <div class="text-center">
+                        <p class="data-mono text-primary text-2xl font-bold">12,400+</p>
+                        <p class="text-white/50 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Runners</p>
+                    </div>
+                    <div class="w-px h-10 bg-white/10"></div>
+                    <div class="text-center">
+                        <p class="data-mono text-primary text-2xl font-bold">3.2M</p>
+                        <p class="text-white/50 text-[10px] uppercase font-bold tracking-[0.2em] mt-1">Territories</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rivals running now -->
+            <div class="absolute bottom-10 left-0 right-0 z-20 flex flex-col items-center gap-3">
+                <div class="flex -space-x-3">
+                    <div
+                        class="size-8 rounded-full bg-teal-500 ring-2 ring-background-dark flex items-center justify-center text-[9px] font-bold text-white">
+                        JD</div>
+                    <div
+                        class="size-8 rounded-full bg-purple-500 ring-2 ring-background-dark flex items-center justify-center text-[9px] font-bold text-white">
+                        SL</div>
+                    <div
+                        class="size-8 rounded-full bg-orange-500 ring-2 ring-background-dark flex items-center justify-center text-[9px] font-bold text-white">
+                        MK</div>
+                    <div
+                        class="flex size-8 items-center justify-center rounded-full bg-primary ring-2 ring-background-dark">
+                        <span class="text-[10px] font-bold text-background-dark">+12k</span>
+                    </div>
+                </div>
+                <p class="text-white/40 text-xs font-medium tracking-wide">
+                    <span class="text-primary font-bold">SpeedyG</span> and 12,398 others are running right now
+                </p>
+            </div>
+
+            <div
+                class="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background-dark via-background-dark/80 to-transparent">
+            </div>
+        </div>
+
+        <!-- ══ RIGHT: Auth Forms ══ -->
+        <div class="flex-1 flex flex-col justify-center items-center px-6 py-12 md:px-20 bg-background-light">
+            <div class="w-full max-w-[400px]">
+
+                <!-- Tab switcher -->
+                <div class="flex bg-surface2 rounded-2xl p-1 mb-8 border border-border">
+                    <button id="tab-signin"
+                        class="tab-btn active flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                        onclick="switchTab('signin')">
+                        Sign In
+                    </button>
+                    <button id="tab-signup" class="tab-btn flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+                        onclick="switchTab('signup')">
+                        Sign Up
+                    </button>
+                </div>
+
+                <!-- ── SIGN IN FORM ── -->
+                <div id="form-signin" class="auth-form">
+                    <div class="space-y-2 mb-8">
+                        <h2 class="text-4xl font-black tracking-tight text-ink">Welcome back</h2>
+                        <p class="text-ink/60 text-base">Enter your details to reclaim your territory</p>
+                    </div>
+
+                    <form id="signin-form" class="space-y-5" novalidate>
+                        <!-- Email -->
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-bold text-ink/80 uppercase tracking-wider"
+                                for="signin-email">Email Address</label>
+                            <div class="relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-[20px]">mail</span>
+                                <input class="auth-input w-full pl-12 pr-4 py-4 rounded-xl" id="signin-email"
+                                    placeholder="runner@example.com" type="email" />
+                            </div>
+                            <p class="error-msg hidden text-[12px] text-red-500 mt-1" id="signin-email-error"></p>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <label class="text-sm font-bold text-ink/80 uppercase tracking-wider"
+                                    for="signin-password">Password</label>
+                                <a class="text-xs font-bold text-primary hover:underline" href="#">Forgot?</a>
+                            </div>
+                            <div class="relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-[20px]">lock</span>
+                                <input class="auth-input w-full pl-12 pr-12 py-4 rounded-xl" id="signin-password"
+                                    placeholder="••••••••" type="password" />
+                                <button type="button"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink transition-colors"
+                                    onclick="togglePassword('signin-password', this)">
+                                    <span class="material-symbols-outlined text-[20px]">visibility</span>
+                                </button>
+                            </div>
+                            <p class="error-msg hidden text-[12px] text-red-500 mt-1" id="signin-password-error"></p>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit"
+                            class="auth-submit-btn w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 mt-2">
+                            <span>Sign In to Dashboard</span>
+                            <span class="flex h-2 w-2 relative">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-background-dark opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-background-dark"></span>
+                            </span>
+                        </button>
+                    </form>
+
+                    <p class="text-center text-ink/60 text-sm mt-6">
+                        New here?
+                        <button class="text-primary font-bold hover:underline" onclick="switchTab('signup')">Create an
+                            account →</button>
+                    </p>
+                </div>
+
+                <!-- ── SIGN UP FORM ── -->
+                <div id="form-signup" class="auth-form hidden">
+                    <div class="space-y-2 mb-8">
+                        <h2 class="text-4xl font-black tracking-tight text-ink">Join the battle</h2>
+                        <p class="text-ink/60 text-base">Create your account and start claiming territory</p>
+                    </div>
+
+                    <form id="signup-form" class="space-y-4" novalidate>
+                        <!-- Full Name -->
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-bold text-ink/80 uppercase tracking-wider" for="signup-name">Full
+                                Name</label>
+                            <div class="relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-[20px]">person</span>
+                                <input class="auth-input w-full pl-12 pr-4 py-4 rounded-xl" id="signup-name"
+                                    placeholder="Your full name" type="text" />
+                            </div>
+                            <p class="error-msg hidden text-[12px] text-red-500" id="signup-name-error"></p>
+                        </div>
+
+                        <!-- Username -->
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-bold text-ink/80 uppercase tracking-wider"
+                                for="signup-username">Username</label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-sm font-bold">@</span>
+                                <input class="auth-input w-full pl-10 pr-16 py-4 rounded-xl" id="signup-username"
+                                    placeholder="runner_name" type="text" maxlength="20" />
+                                <span
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] text-ink/30 font-mono"
+                                    id="username-count">0/20</span>
+                            </div>
+                            <p class="error-msg hidden text-[12px] text-red-500" id="signup-username-error"></p>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-bold text-ink/80 uppercase tracking-wider"
+                                for="signup-email">Email Address</label>
+                            <div class="relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-[20px]">mail</span>
+                                <input class="auth-input w-full pl-12 pr-4 py-4 rounded-xl" id="signup-email"
+                                    placeholder="runner@example.com" type="email" />
+                            </div>
+                            <p class="error-msg hidden text-[12px] text-red-500" id="signup-email-error"></p>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-bold text-ink/80 uppercase tracking-wider"
+                                for="signup-password">Password</label>
+                            <div class="relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-[20px]">lock</span>
+                                <input class="auth-input w-full pl-12 pr-12 py-4 rounded-xl" id="signup-password"
+                                    placeholder="Min 8 characters" type="password" />
+                                <button type="button"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink transition-colors"
+                                    onclick="togglePassword('signup-password', this)">
+                                    <span class="material-symbols-outlined text-[20px]">visibility</span>
+                                </button>
+                            </div>
+                            <!-- Password strength bar -->
+                            <div class="flex gap-1.5 mt-2" id="strength-bars">
+                                <div class="strength-bar h-1 flex-1 rounded-full bg-ink/10" id="bar-1"></div>
+                                <div class="strength-bar h-1 flex-1 rounded-full bg-ink/10" id="bar-2"></div>
+                                <div class="strength-bar h-1 flex-1 rounded-full bg-ink/10" id="bar-3"></div>
+                                <div class="strength-bar h-1 flex-1 rounded-full bg-ink/10" id="bar-4"></div>
+                            </div>
+                            <p class="text-[11px] text-ink/40 mt-1" id="strength-label"></p>
+                            <p class="error-msg hidden text-[12px] text-red-500" id="signup-password-error"></p>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="space-y-1.5">
+                            <label class="text-sm font-bold text-ink/80 uppercase tracking-wider"
+                                for="signup-confirm">Confirm Password</label>
+                            <div class="relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-ink/40 text-[20px]">lock_reset</span>
+                                <input class="auth-input w-full pl-12 pr-4 py-4 rounded-xl" id="signup-confirm"
+                                    placeholder="Re-enter password" type="password" />
+                            </div>
+                            <p class="error-msg hidden text-[12px] text-red-500" id="signup-confirm-error"></p>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit"
+                            class="auth-submit-btn w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 mt-2">
+                            <span>Create My Territory</span>
+                            <span class="text-lg">🚩</span>
+                        </button>
+                    </form>
+
+                    <p class="text-center text-ink/60 text-sm mt-6">
+                        Already have an account?
+                        <button class="text-primary font-bold hover:underline" onclick="switchTab('signin')">Sign In
+                            →</button>
+                    </p>
+                </div>
+
+            </div>
+
+            <footer class="mt-12 text-xs text-ink/30 font-mono">
+                v2.4.0 — Tactical Territory Management System
+            </footer>
+        </div>
+
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
