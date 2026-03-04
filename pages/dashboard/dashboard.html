@@ -42,9 +42,8 @@
                     <span
                         class="absolute top-0 right-0 w-[7px] h-[7px] bg-danger rounded-full border border-white"></span>
                 </button>
-                <div
-                    class="w-[34px] h-[34px] rounded-full orange-gradient border-2 border-teal flex items-center justify-center text-[11px] font-bold text-white shadow-sm">
-                    RX</div>
+                <div class="w-[34px] h-[34px] rounded-full orange-gradient border-2 border-teal flex items-center justify-center text-[11px] font-bold text-white shadow-sm"
+                    id="nav-avatar">RX</div>
             </div>
         </div>
     </nav>
@@ -67,18 +66,19 @@
                             <span class="absolute inset-0 rounded-full bg-teal-mid ping-slow"></span>
                         </div>
                     </div>
-                    <h2 class="font-bebas text-[21px] leading-tight">Runner_X</h2>
-                    <span class="text-[11px] font-medium text-muted uppercase tracking-wider">District General</span>
+                    <h2 class="font-bebas text-[21px] leading-tight" id="profile-name">Runner_X</h2>
+                    <span class="text-[11px] font-medium text-muted uppercase tracking-wider" id="profile-rank">District
+                        General</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <div class="bg-surface2 rounded-xl p-3 text-center">
                         <span class="block text-[10px] text-muted uppercase mb-1">Level</span>
-                        <span class="font-mono text-[20px] leading-none">14</span>
+                        <span class="font-mono text-[20px] leading-none" id="profile-level">14</span>
                     </div>
                     <div class="bg-surface2 rounded-xl p-3 text-center">
                         <span class="block text-[10px] text-muted uppercase mb-1">Defenses</span>
-                        <span class="font-mono text-[20px] leading-none">18</span>
+                        <span class="font-mono text-[20px] leading-none" id="profile-defenses">18</span>
                     </div>
                 </div>
 
@@ -88,10 +88,11 @@
                     <div>
                         <div class="flex justify-between items-end mb-1.5">
                             <span class="text-[10px] font-medium text-muted uppercase">Empire XP</span>
-                            <span class="font-mono text-[11px] text-muted">6,820 / 10k</span>
+                            <span class="font-mono text-[11px] text-muted" id="xp-text">6,820 / 10k</span>
                         </div>
                         <div class="h-[5px] w-full bg-surface2 rounded-full overflow-hidden">
-                            <div class="h-full teal-gradient rounded-full animate-grow-x" style="width:68%"></div>
+                            <div class="h-full teal-gradient rounded-full animate-grow-x" style="width:68%" id="xp-bar">
+                            </div>
                         </div>
                     </div>
                     <div>

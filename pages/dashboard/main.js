@@ -207,4 +207,128 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+
+    // ── 8. LOAD USER PROFILE FROM API ─────────────────────
+    const API_BASE = 'http://localhost:5000/api';
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+    // Update profile with stored user data immediately
+    if (user) {
+        const nameEl = document.getElementById('profile-name');
+        const avatarEl = document.getElementById('nav-avatar');
+        if (nameEl) nameEl.textContent = user.name || 'Runner';
+        if (avatarEl) {
+            const initials = (user.name || 'RX').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            avatarEl.textContent = initials;
+        }
+    }
+
+    // Fetch stats from API and update dashboard
+    if (token) {
+        fetch(`${API_BASE}/runs/stats`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.stats) {
+                    const s = data.stats;
+                    // Calculate level from XP (1 level per 1000 XP)
+                    const level = Math.floor(s.totalXP / 1000) + 1;
+                    const xpInLevel = s.totalXP % 1000;
+                    const xpPercent = Math.round((xpInLevel / 1000) * 100);
+
+                    const levelEl = document.getElementById('profile-level');
+                    const defEl = document.getElementById('profile-defenses');
+                    const xpTextEl = document.getElementById('xp-text');
+                    const xpBarEl = document.getElementById('xp-bar');
+
+                    if (levelEl) levelEl.textContent = level;
+                    if (defEl) defEl.textContent = s.totalTerritories;
+                    if (xpTextEl) xpTextEl.textContent = `${s.totalXP.toLocaleString()} / ${(Math.ceil(s.totalXP / 1000) * 1000).toLocaleString()}`;
+                    if (xpBarEl) xpBarEl.style.width = `${xpPercent}%`;
+
+                    // Update rank based on level
+                    const rankEl = document.getElementById('profile-rank');
+                    if (rankEl) {
+                        const ranks = ['Recruit', 'Scout', 'Patrol Runner', 'Zone Captain', 'District General', 'Territory Warlord'];
+                        rankEl.textContent = ranks[Math.min(Math.floor(level / 3), ranks.length - 1)];
+                    }
+                }
+            })
+            .catch(() => { }); // Silently fail if API unavailable
+
+        // ── 9. LOAD RUN HISTORY FROM API ──────────────────────
+        fetch(`${API_BASE}/runs`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.runs && data.runs.length > 0) {
+                    const filterHeader = document.querySelector('header.flex.items-center.justify-between.mb-1');
+                    if (!filterHeader) return;
+
+                    // Insert run cards from API after existing static cards
+                    const container = filterHeader.parentElement;
+                    const insertPoint = container.lastElementChild;
+
+                    data.runs.forEach(run => {
+                        const date = new Date(run.createdAt);
+                        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                        const mins = Math.floor(run.duration / 60);
+                        const secs = run.duration % 60;
+
+                        const cardHtml = `
+                    <article class="card-base shadow-card cursor-pointer animate-fade-up activity-card" data-type="run">
+                        <div class="p-[14px_18px] flex items-center justify-between hover:bg-surface2 transition-colors rounded-[inherit]"
+                            onclick="this.nextElementSibling.classList.toggle('grid-rows-[1fr]'); this.nextElementSibling.classList.toggle('grid-rows-[0fr]'); this.querySelector('.chevron').style.transform = this.querySelector('.chevron').style.transform === 'rotate(90deg)' ? 'rotate(0deg)' : 'rotate(90deg)';">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full orange-gradient border border-border"></div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[14px] font-semibold">${user ? user.name : 'Runner'}</span>
+                                        <span class="text-[12px] text-muted">• ${dateStr} · ${timeStr}</span>
+                                    </div>
+                                    <p class="text-[12px] text-muted mt-0.5">Recorded Run · <span class="text-ink font-medium">${run.distance.toFixed(2)} km</span></p>
+                                </div>
+                            </div>
+                            <div class="text-[20px] text-muted transition-transform duration-300 transform chevron">›</div>
+                        </div>
+                        <div class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300">
+                            <div class="overflow-hidden">
+                                <div class="border-t border-border p-[14px_18px]">
+                                    <div class="grid grid-cols-4 gap-4 border-b border-border pb-4 mb-4">
+                                        <div>
+                                            <span class="block text-[10px] text-muted uppercase mb-1">Distance</span>
+                                            <div class="flex items-baseline gap-1"><span class="font-mono text-[17px]">${run.distance.toFixed(2)}</span><span class="text-[10px] text-muted uppercase">km</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] text-muted uppercase mb-1">Time</span>
+                                            <div class="flex items-baseline gap-1"><span class="font-mono text-[17px]">${mins}m ${secs}s</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] text-muted uppercase mb-1">Steps</span>
+                                            <div class="flex items-baseline gap-1"><span class="font-mono text-[17px]">${run.steps.toLocaleString()}</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="block text-[10px] text-muted uppercase mb-1">XP Earned</span>
+                                            <div class="flex items-baseline gap-1"><span class="font-mono text-[17px]">${run.xpEarned}</span><span class="text-[10px] text-muted uppercase">xp</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-5 h-5 bg-teal rounded-full flex items-center justify-center text-[10px] text-white">✓</div>
+                                        <p class="text-[13px] text-teal-dark font-medium">Run synced from cloud.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>`;
+
+                        container.insertAdjacentHTML('beforeend', cardHtml);
+                    });
+                }
+            })
+            .catch(() => { }); // Silently fail if API unavailable
+    }
 });
