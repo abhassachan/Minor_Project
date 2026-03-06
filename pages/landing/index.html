@@ -41,10 +41,11 @@
   </nav>
 
   <!-- HERO -->
-  <section class="pt-40 pb-20 lg:pt-52 lg:pb-32 px-6 overflow-hidden relative">
-    <canvas id="hero-particles"></canvas>
+  <section class="pt-24 pb-16 lg:pt-32 lg:pb-24 px-6 overflow-hidden relative">
+    <canvas id="hero-particles"
+      style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5"></canvas>
     <div class="container mx-auto grid lg:grid-cols-2 gap-16 items-center">
-      <div class="z-10 animate-fade-up">
+      <div class="z-10" style="animation: fadeUp 0.8s ease-out forwards">
         <h1 class="hero-heading text-7xl md:text-8xl lg:text-9xl font-heading text-brand-ink mb-6">
           RUN.<br />CAPTURE.<br />DOMINATE.
         </h1>
