@@ -3,7 +3,8 @@
    ================================ */
 
 // ── API BASE URL ─────────────────────────────────────
-const API_BASE = 'http://localhost:5000/api';
+// ── API BASE URL ─────────────────────────────────────
+const API_BASE = 'https://minor-project-4e55.onrender.com/api';
 
 // ── 1. TAB SWITCHING ─────────────────────────────────
 function switchTab(tab) {
