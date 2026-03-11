@@ -29,6 +29,30 @@ const blueDotIcon = L.divIcon({
   iconAnchor: [11, 11],
 })
 
+// Blue pulsing location dot icon
+const blueDotIcon = L.divIcon({
+  className: '',
+  html: `
+    <div style="position:relative;width:22px;height:22px">
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        background:rgba(59,130,246,0.25);
+        animation:pulse-ring 1.8s ease-out infinite;
+      "></div>
+      <div style="
+        position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        width:14px;height:14px;border-radius:50%;
+        background:#3b82f6;
+        border:2.5px solid #fff;
+        box-shadow:0 0 8px rgba(59,130,246,0.8);
+      "></div>
+    </div>
+  `,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+})
+
 const METERS_PER_DEG_LAT = 111320
 const MIN_DISTANCE_FOR_METRICS = 0.01
 const LOOP_CLOSE_THRESHOLD = 35
