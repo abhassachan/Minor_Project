@@ -1,8 +1,33 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import {
-  MapContainer, TileLayer, Marker, Popup,
+  MapContainer, TileLayer, Marker,
   Polyline, Polygon, useMap,
 } from 'react-leaflet'
+import L from 'leaflet'
+
+// Blue pulsing location dot icon
+const blueDotIcon = L.divIcon({
+  className: '',
+  html: `
+    <div style="position:relative;width:22px;height:22px">
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        background:rgba(59,130,246,0.25);
+        animation:pulse-ring 1.8s ease-out infinite;
+      "></div>
+      <div style="
+        position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        width:14px;height:14px;border-radius:50%;
+        background:#3b82f6;
+        border:2.5px solid #fff;
+        box-shadow:0 0 8px rgba(59,130,246,0.8);
+      "></div>
+    </div>
+  `,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+})
 
 const METERS_PER_DEG_LAT = 111320
 const MIN_DISTANCE_FOR_METRICS = 0.01
@@ -26,8 +51,8 @@ function calculateDistance(coord1, coord2) {
   const toRad = (v) => (v * Math.PI) / 180
   const dLat = toRad(coord2[0] - coord1[0])
   const dLon = toRad(coord2[1] - coord1[1])
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(coord1[0])) * Math.cos(toRad(coord2[0])) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(coord1[0]))*Math.cos(toRad(coord2[0]))*Math.sin(dLon/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
 }
 
 function polygonArea(points) {
@@ -51,12 +76,12 @@ function RecenterMap({ position, isRunning }) {
 
 function formatPace(s) {
   if (!s || !isFinite(s) || s <= 0) return '--:--'
-  return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`
+  return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`
 }
-function formatDuration(s) { return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}` }
+function formatDuration(s) { return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}` }
 function formatArea(m) {
-  if (m >= 1_000_000) return `${(m / 1_000_000).toFixed(2)} km²`
-  if (m >= 10_000) return `${(m / 10_000).toFixed(1)} ha`
+  if (m >= 1_000_000) return `${(m/1_000_000).toFixed(2)} km²`
+  if (m >= 10_000) return `${(m/10_000).toFixed(1)} ha`
   return `${Math.round(m)} m²`
 }
 
@@ -88,6 +113,9 @@ export default function MapView() {
   const timerRef = useRef(null)
   const lastAccelRef = useRef(0)
   const lastStepTimeRef = useRef(0)
+  const stepPhaseRef = useRef('idle')   // 'idle' | 'rising' | 'peaked'
+  const stepPeakRef = useRef(0)
+  const recentMagsRef = useRef([])      // rolling window for dynamic threshold
   const lastMovementTimeRef = useRef(Date.now())
   const lastGpsTimeRef = useRef(null)
   const lastGpsPosRef = useRef(null)
@@ -102,6 +130,8 @@ export default function MapView() {
   useEffect(() => { isRunningRef.current = isRunning }, [isRunning])
   useEffect(() => { isAutoPausedRef.current = isAutoPaused }, [isAutoPaused])
   useEffect(() => { durationRef.current = duration }, [duration])
+
+
 
   // PWA
   useEffect(() => {
@@ -204,8 +234,8 @@ export default function MapView() {
         lastGpsTimeRef.current = now
       }
     },
-      (err) => setError(err.message),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 })
+    (err) => setError(err.message),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 })
 
     return () => navigator.geolocation.clearWatch(watchId)
   }, [])
@@ -221,16 +251,52 @@ export default function MapView() {
   useEffect(() => {
     const handleMotion = (e) => {
       const acc = e.accelerationIncludingGravity; if (!acc) return
-      const mag = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2)
-      const diff = Math.abs(mag - lastAccelRef.current)
-      lastAccelRef.current = mag
+      const mag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2)
       const now = Date.now()
-      if (mag > 12) { lastMovementTimeRef.current = now; if (isAutoPausedRef.current) setIsAutoPaused(false) }
+
+      // ── Auto-pause detection ──
+      if (mag > 11) { lastMovementTimeRef.current = now; if (isAutoPausedRef.current) setIsAutoPaused(false) }
       if (isRunningRef.current && now - lastMovementTimeRef.current > 3000 && !isAutoPausedRef.current) setIsAutoPaused(true)
-      if (diff > 2.5 && now - lastStepTimeRef.current > 450) {
-        if (isRunningRef.current && !isAutoPausedRef.current) setSteps((s) => s + 1)
-        lastStepTimeRef.current = now
+
+      // ── Dynamic threshold using rolling average ──
+      const window = recentMagsRef.current
+      window.push(mag)
+      if (window.length > 20) window.shift()   // keep last 20 readings
+      const avg = window.reduce((a, b) => a + b, 0) / window.length
+      const threshold = avg + 2.0   // step peak must be 2.0 above recent average
+
+      // ── Peak-valley step detection ──
+      // A step = magnitude rises above threshold (peak) then falls back below it (valley)
+      // This prevents counting the same footstrike multiple times
+      const phase = stepPhaseRef.current
+
+      if (phase === 'idle' || phase === 'valley') {
+        if (mag > threshold) {
+          stepPhaseRef.current = 'rising'
+          stepPeakRef.current = mag
+        }
+      } else if (phase === 'rising') {
+        if (mag > stepPeakRef.current) {
+          stepPeakRef.current = mag   // track the actual peak
+        } else if (mag < threshold) {
+          // Magnitude fell back below threshold → valid step completed
+          const timeSinceLast = now - lastStepTimeRef.current
+          // Minimum 400ms between steps (~150 steps/min max, realistic for sprinting)
+          // Maximum 2000ms between steps (slower than a slow walk = not a step)
+          if (timeSinceLast > 400 && timeSinceLast < 2000) {
+            if (isRunningRef.current && !isAutoPausedRef.current) {
+              setSteps((s) => s + 1)
+            }
+            lastStepTimeRef.current = now
+          } else if (timeSinceLast >= 2000) {
+            // Too long since last step — still reset the timer so next step can register
+            lastStepTimeRef.current = now
+          }
+          stepPhaseRef.current = 'valley'
+        }
       }
+
+      lastAccelRef.current = mag
     }
     window.addEventListener('devicemotion', handleMotion)
     return () => window.removeEventListener('devicemotion', handleMotion)
@@ -247,47 +313,14 @@ export default function MapView() {
     setIsAutoPaused(false); setIsRunning(true)
   }
 
-  const handleStop = async () => {
+  const handleStop = () => {
     setIsRunning(false); setIsAutoPaused(false); setLiveSpeed(0)
     setCurrentLoopStart(null); currentSegmentRef.current = []; segmentDistRef.current = 0
     if (distance < 5) { setSaveMessage('Run too short to save (< 5m)'); return }
-    const distKm = distance / 1000
-    const cal = Number((steps * 0.04).toFixed(1))
-    const pace = distKm > 0 && duration > 0 ? duration / distKm : 0
-    const newRun = { id: Date.now(), date: new Date().toLocaleString(), distance: distKm, duration, steps, calories: cal, path, splits }
-
-    // Save to localStorage (offline-first)
+    const newRun = { id: Date.now(), date: new Date().toLocaleString(), distance: distance/1000, duration, steps, calories: Number((steps*0.04).toFixed(1)), path, splits }
     const updated = [newRun, ...runs]
     setRuns(updated); localStorage.setItem('runs', JSON.stringify(updated))
-
-    // Save to backend API
-    const token = localStorage.getItem('token')
-    if (token) {
-      try {
-        const res = await fetch('http://localhost:5000/api/runs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            distance: distKm,
-            duration,
-            steps,
-            calories: cal,
-            pace,
-            route: path,
-            territoriesCaptured: territories.length,
-          }),
-        })
-        if (res.ok) {
-          setSaveMessage('Run saved to cloud ✓')
-        } else {
-          setSaveMessage('Run saved locally (cloud sync failed)')
-        }
-      } catch (err) {
-        setSaveMessage('Run saved locally (offline)')
-      }
-    } else {
-      setSaveMessage('Run saved ✓ (log in to sync)')
-    }
+    setSaveMessage('Run saved ✓')
   }
 
   const distanceKm = distance / 1000
@@ -302,51 +335,55 @@ export default function MapView() {
   const needsMore = LOOP_MIN_DISTANCE - loopSegmentLen
   const tile = isDarkMap ? TILES.dark : TILES.light
 
-  if (error) return <p style={{ color: 'red', padding: 16 }}>{error}</p>
+  if (error) return <p style={{ color:'red', padding:16 }}>{error}</p>
   if (!position) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f172a', color: '#94a3b8', fontFamily: 'monospace', fontSize: 16 }}>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0f172a', color:'#94a3b8', fontFamily:'monospace', fontSize:16 }}>
       📡 Acquiring GPS signal…
     </div>
   )
 
   const panelStyle = {
-    position: 'absolute', zIndex: 1000,
-    background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)',
-    color: '#f1f5f9', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)',
-    fontFamily: '"JetBrains Mono","Fira Code",monospace', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    position:'absolute', zIndex:1000,
+    background:'rgba(10,15,28,0.88)', backdropFilter:'blur(12px)',
+    color:'#f1f5f9', borderRadius:'14px', border:'1px solid rgba(255,255,255,0.08)',
+    fontFamily:'"JetBrains Mono","Fira Code",monospace', boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
   }
 
   const row = (label, value, accent) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-      <span style={{ fontSize: 11, opacity: 0.55, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 700, color: accent || '#f1f5f9' }}>{value}</span>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
+      <span style={{ fontSize:11, opacity:0.55, letterSpacing:'0.06em', textTransform:'uppercase' }}>{label}</span>
+      <span style={{ fontSize:14, fontWeight:700, color: accent||'#f1f5f9' }}>{value}</span>
     </div>
   )
 
   return (
     <>
       {loopFlash && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(34,197,94,0.2)', pointerEvents: 'none', animation: 'fadeOut 0.8s ease forwards' }} />
+        <div style={{ position:'fixed', inset:0, zIndex:2000, background:'rgba(34,197,94,0.2)', pointerEvents:'none', animation:'fadeOut 0.8s ease forwards' }} />
       )}
-      <style>{`@keyframes fadeOut { from{opacity:1} to{opacity:0} }`}</style>
+      <style>{`@keyframes fadeOut { from{opacity:1} to{opacity:0} }
+        @keyframes pulse-ring {
+          0%   { transform:scale(0.5); opacity:0.8; }
+          100% { transform:scale(2.2); opacity:0; }
+        }`}</style>
 
       {/* ── CONTROL PANEL ── */}
-      <div style={{ ...panelStyle, top: 12, left: 12, width: isPanelCollapsed ? 'auto' : 240 }}>
-        <div onClick={() => setIsPanelCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: isPanelCollapsed ? '10px 14px' : '12px 16px 0', cursor: 'pointer', userSelect: 'none' }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: isAutoPaused ? '#f59e0b' : isRunning ? '#22c55e' : '#475569', boxShadow: isRunning && !isAutoPaused ? '0 0 8px #22c55e' : 'none', transition: 'all 0.3s' }} />
-          <span style={{ fontSize: isPanelCollapsed ? 22 : 14, fontWeight: 800, color: isRunning && !isAutoPaused ? '#22c55e' : '#94a3b8', letterSpacing: '0.05em', transition: 'all 0.2s' }}>{formatDuration(duration)}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 12, opacity: 0.45, transform: isPanelCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.25s' }}>▲</span>
+      <div style={{ ...panelStyle, top:12, left:12, width: isPanelCollapsed ? 'auto' : 240 }}>
+        <div onClick={() => setIsPanelCollapsed(v => !v)} style={{ display:'flex', alignItems:'center', gap:8, padding: isPanelCollapsed ? '10px 14px' : '12px 16px 0', cursor:'pointer', userSelect:'none' }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background: isAutoPaused ? '#f59e0b' : isRunning ? '#22c55e' : '#475569', boxShadow: isRunning && !isAutoPaused ? '0 0 8px #22c55e' : 'none', transition:'all 0.3s' }} />
+          <span style={{ fontSize: isPanelCollapsed ? 22 : 14, fontWeight:800, color: isRunning && !isAutoPaused ? '#22c55e' : '#94a3b8', letterSpacing:'0.05em', transition:'all 0.2s' }}>{formatDuration(duration)}</span>
+          <span style={{ marginLeft:'auto', fontSize:12, opacity:0.45, transform: isPanelCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition:'transform 0.25s' }}>▲</span>
         </div>
 
         {!isPanelCollapsed && (
-          <div style={{ padding: '10px 16px 14px' }}>
-            <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: '0.05em', color: isRunning && !isAutoPaused ? '#22c55e' : '#94a3b8', textAlign: 'center', marginBottom: 12, transition: 'color 0.3s' }}>{formatDuration(duration)}</div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, marginBottom: 10 }}>
+          <div style={{ padding:'10px 16px 14px' }}>
+            <div style={{ fontSize:36, fontWeight:800, letterSpacing:'0.05em', color: isRunning && !isAutoPaused ? '#22c55e' : '#94a3b8', textAlign:'center', marginBottom:12, transition:'color 0.3s' }}>{formatDuration(duration)}</div>
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:10, marginBottom:10 }}>
               {row('Distance', `${distanceKm.toFixed(2)} km`)}
               {row('Steps', steps.toLocaleString())}
               {row('Calories', `${calories} kcal`)}
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, marginBottom: 12 }}>
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:10, marginBottom:12 }}>
               {row('Avg Pace', avgPace)}
               {row('Avg Speed', `${avgSpeed.toFixed(2)} km/h`)}
               {row('Live Pace', livePace, '#4ade80')}
@@ -355,22 +392,22 @@ export default function MapView() {
             {row('Territory', formatArea(totalArea), '#60a5fa')}
             {row('Loops', `${territories.length}`, '#a78bfa')}
             {isRunning && (
-              <div style={{ marginTop: 8, padding: '6px 8px', background: canClose ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)', border: `1px solid ${canClose ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.25)'}`, borderRadius: 7, fontSize: 11, color: canClose ? '#86efac' : '#fca5a5', textAlign: 'center' }}>
+              <div style={{ marginTop:8, padding:'6px 8px', background: canClose ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)', border:`1px solid ${canClose ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.25)'}`, borderRadius:7, fontSize:11, color: canClose ? '#86efac' : '#fca5a5', textAlign:'center' }}>
                 {canClose ? '🟢 Run back to orange dot to capture!' : `🔴 ${Math.round(needsMore)}m more to enable capture`}
               </div>
             )}
-            {saveMessage && <div style={{ marginTop: 6, fontSize: 11, textAlign: 'center', color: saveMessage.includes('✓') ? '#4ade80' : '#f87171' }}>{saveMessage}</div>}
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {saveMessage && <div style={{ marginTop:6, fontSize:11, textAlign:'center', color: saveMessage.includes('✓') ? '#4ade80' : '#f87171' }}>{saveMessage}</div>}
+            <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:6 }}>
               {!isRunning
-                ? <button onClick={handleStart} style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em' }}>▶ START RUN</button>
-                : <button onClick={handleStop} style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em' }}>■ STOP RUN</button>
+                ? <button onClick={handleStart} style={{ background:'linear-gradient(135deg,#22c55e,#16a34a)', color:'#fff', border:'none', borderRadius:8, padding:'9px 0', fontFamily:'inherit', fontWeight:700, fontSize:13, cursor:'pointer', letterSpacing:'0.04em' }}>▶ START RUN</button>
+                : <button onClick={handleStop} style={{ background:'linear-gradient(135deg,#ef4444,#dc2626)', color:'#fff', border:'none', borderRadius:8, padding:'9px 0', fontFamily:'inherit', fontWeight:700, fontSize:13, cursor:'pointer', letterSpacing:'0.04em' }}>■ STOP RUN</button>
               }
-              {isInstallable && <button onClick={handleInstall} style={{ background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>⬇ Install App</button>}
+              {isInstallable && <button onClick={handleInstall} style={{ background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'#fff', border:'none', borderRadius:8, padding:'8px 0', fontFamily:'inherit', fontWeight:700, fontSize:12, cursor:'pointer' }}>⬇ Install App</button>}
               {showIOSBanner && !isInstallable && (
-                <div style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 8, padding: '8px 10px', fontSize: 11, lineHeight: 1.6, color: '#93c5fd' }}>
-                  <div style={{ fontWeight: 700, marginBottom: 2, color: '#fff' }}>📲 Install on iOS</div>
-                  <div>Tap <strong style={{ color: '#fff' }}>Share ↑</strong> then <strong style={{ color: '#fff' }}>"Add to Home Screen"</strong></div>
-                  <div onClick={() => setShowIOSBanner(false)} style={{ marginTop: 5, opacity: 0.45, cursor: 'pointer', fontSize: 10, textDecoration: 'underline' }}>Dismiss</div>
+                <div style={{ background:'rgba(59,130,246,0.15)', border:'1px solid rgba(59,130,246,0.35)', borderRadius:8, padding:'8px 10px', fontSize:11, lineHeight:1.6, color:'#93c5fd' }}>
+                  <div style={{ fontWeight:700, marginBottom:2, color:'#fff' }}>📲 Install on iOS</div>
+                  <div>Tap <strong style={{color:'#fff'}}>Share ↑</strong> then <strong style={{color:'#fff'}}>"Add to Home Screen"</strong></div>
+                  <div onClick={() => setShowIOSBanner(false)} style={{ marginTop:5, opacity:0.45, cursor:'pointer', fontSize:10, textDecoration:'underline' }}>Dismiss</div>
                 </div>
               )}
             </div>
@@ -379,38 +416,38 @@ export default function MapView() {
       </div>
 
       {/* ── TOP RIGHT: SPLITS + THEME TOGGLE stacked ── */}
-      <div style={{ position: 'absolute', zIndex: 1000, top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+      <div style={{ position:'absolute', zIndex:1000, top:12, right:12, display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end' }}>
 
         {/* Theme toggle button */}
         <button
           onClick={() => setIsDarkMap(v => !v)}
           style={{
-            background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
-            padding: '8px 14px', cursor: 'pointer',
-            fontFamily: '"JetBrains Mono","Fira Code",monospace',
-            fontSize: 13, color: '#f1f5f9',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-            display: 'flex', alignItems: 'center', gap: 6,
-            transition: 'background 0.2s',
-            userSelect: 'none',
+            background:'rgba(10,15,28,0.88)', backdropFilter:'blur(12px)',
+            border:'1px solid rgba(255,255,255,0.08)', borderRadius:10,
+            padding:'8px 14px', cursor:'pointer',
+            fontFamily:'"JetBrains Mono","Fira Code",monospace',
+            fontSize:13, color:'#f1f5f9',
+            boxShadow:'0 4px 16px rgba(0,0,0,0.3)',
+            display:'flex', alignItems:'center', gap:6,
+            transition:'background 0.2s',
+            userSelect:'none',
           }}
         >
           {isDarkMap ? '☀️' : '🌙'}
-          <span style={{ fontSize: 11, opacity: 0.7, letterSpacing: '0.05em' }}>
+          <span style={{ fontSize:11, opacity:0.7, letterSpacing:'0.05em' }}>
             {isDarkMap ? 'LIGHT' : 'DARK'}
           </span>
         </button>
 
         {/* Splits panel — appears below toggle when there are splits */}
         {displaySplits.length > 0 && (
-          <div style={{ background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)', color: '#f1f5f9', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', fontFamily: '"JetBrains Mono","Fira Code",monospace', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '12px 14px', width: 160 }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.5, marginBottom: 8 }}>KM Splits</div>
-            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+          <div style={{ background:'rgba(10,15,28,0.88)', backdropFilter:'blur(12px)', color:'#f1f5f9', borderRadius:'14px', border:'1px solid rgba(255,255,255,0.08)', fontFamily:'"JetBrains Mono","Fira Code",monospace', boxShadow:'0 8px 32px rgba(0,0,0,0.4)', padding:'12px 14px', width:160 }}>
+            <div style={{ fontSize:11, letterSpacing:'0.08em', textTransform:'uppercase', opacity:0.5, marginBottom:8 }}>KM Splits</div>
+            <div style={{ maxHeight:200, overflowY:'auto' }}>
               {displaySplits.map(s => (
-                <div key={s.km} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 13 }}>
-                  <span style={{ opacity: 0.6 }}>KM {s.km}</span>
-                  <span style={{ fontWeight: 700, color: '#facc15' }}>{s.pace}</span>
+                <div key={s.km} style={{ display:'flex', justifyContent:'space-between', marginBottom:5, fontSize:13 }}>
+                  <span style={{ opacity:0.6 }}>KM {s.km}</span>
+                  <span style={{ fontWeight:700, color:'#facc15' }}>{s.pace}</span>
                 </div>
               ))}
             </div>
@@ -419,20 +456,20 @@ export default function MapView() {
       </div>
 
       {/* ── RUN HISTORY ── */}
-      <div style={{ ...panelStyle, bottom: 12, left: 12, width: 240, fontSize: 13 }}>
-        <div onClick={() => setIsHistoryCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', cursor: 'pointer', userSelect: 'none' }}>
-          <span style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Run History {runs.length > 0 && `(${runs.length})`}</span>
-          <span style={{ fontSize: 12, opacity: 0.4, transform: isHistoryCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s' }}>▲</span>
+      <div style={{ ...panelStyle, bottom:12, left:12, width:240, fontSize:13 }}>
+        <div onClick={() => setIsHistoryCollapsed(v => !v)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', cursor:'pointer', userSelect:'none' }}>
+          <span style={{ fontWeight:700, fontSize:12, letterSpacing:'0.06em', textTransform:'uppercase', opacity:0.6 }}>Run History {runs.length > 0 && `(${runs.length})`}</span>
+          <span style={{ fontSize:12, opacity:0.4, transform: isHistoryCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.25s' }}>▲</span>
         </div>
         {!isHistoryCollapsed && (
-          <div style={{ maxHeight: 200, overflowY: 'auto', padding: '0 14px 12px' }}>
-            {runs.length === 0 && <div style={{ opacity: 0.4, fontSize: 12 }}>No runs yet</div>}
+          <div style={{ maxHeight:200, overflowY:'auto', padding:'0 14px 12px' }}>
+            {runs.length === 0 && <div style={{ opacity:0.4, fontSize:12 }}>No runs yet</div>}
             {runs.map(run => (
               <div key={run.id} onClick={() => setSelectedRun(selectedRun?.id === run.id ? null : run)}
-                style={{ marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', background: selectedRun?.id === run.id ? 'rgba(34,197,94,0.08)' : 'transparent', borderRadius: 6, padding: '4px 6px', transition: 'background 0.2s' }}>
-                <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 2 }}>{run.date}</div>
-                <div style={{ fontWeight: 600 }}>{run.distance.toFixed(2)} km · {formatDuration(run.duration)}</div>
-                <div style={{ fontSize: 11, opacity: 0.6 }}>{run.steps} steps · {run.calories} kcal</div>
+                style={{ marginBottom:8, borderBottom:'1px solid rgba(255,255,255,0.07)', cursor:'pointer', background: selectedRun?.id === run.id ? 'rgba(34,197,94,0.08)' : 'transparent', borderRadius:6, padding:'4px 6px', transition:'background 0.2s' }}>
+                <div style={{ fontSize:11, opacity:0.5, marginBottom:2 }}>{run.date}</div>
+                <div style={{ fontWeight:600 }}>{run.distance.toFixed(2)} km · {formatDuration(run.duration)}</div>
+                <div style={{ fontSize:11, opacity:0.6 }}>{run.steps} steps · {run.calories} kcal</div>
               </div>
             ))}
           </div>
@@ -440,21 +477,21 @@ export default function MapView() {
       </div>
 
       {/* ── MAP ── */}
-      <MapContainer center={position} zoom={16} style={{ height: '100vh', width: '100%' }}>
+      <MapContainer center={position} zoom={16} style={{ height:'100vh', width:'100%' }}>
         <TileLayer key={isDarkMap ? 'dark' : 'light'} url={tile.url} attribution={tile.attribution} />
         <RecenterMap position={position} isRunning={isRunning} />
-        <Marker position={position}><Popup>You are here</Popup></Marker>
+        <Marker position={position} icon={blueDotIcon} />
 
         {territories.map(t => (
           <Polygon key={t.id} positions={t.points}
-            pathOptions={{ color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.3 }} />
+            pathOptions={{ color:'#22c55e', weight:2, fillColor:'#22c55e', fillOpacity:0.3 }} />
         ))}
 
         {displayPath.length > 1 && <Polyline positions={displayPath} color="#ef4444" weight={3} />}
 
         {isRunning && currentSegmentRef.current.length > 1 && (
           <Polyline positions={currentSegmentRef.current}
-            pathOptions={{ color: '#f97316', weight: 2, dashArray: '6 4', opacity: 0.8 }} />
+            pathOptions={{ color:'#f97316', weight:2, dashArray:'6 4', opacity:0.8 }} />
         )}
 
         {isRunning && currentLoopStart && (
