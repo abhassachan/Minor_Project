@@ -1,11 +1,26 @@
 const express = require('express');
 const Run = require('../models/Run');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
 // All routes below require authentication
 router.use(auth);
+
+// Achievement definitions
+const ACHIEVEMENTS = {
+    first_run: { check: (totalRuns) => totalRuns >= 1, label: 'First Run' },
+    '5_runs': { check: (totalRuns) => totalRuns >= 5, label: '5 Runs Complete' },
+    '10_runs': { check: (totalRuns) => totalRuns >= 10, label: '10 Runs Complete' },
+    '5k_conqueror': { check: (_, totalDist) => totalDist >= 5, label: '5K Conqueror' },
+    '10k_warrior': { check: (_, totalDist) => totalDist >= 10, label: '10K Warrior' },
+    '50k_legend': { check: (_, totalDist) => totalDist >= 50, label: '50K Legend' },
+    '100k_god': { check: (_, totalDist) => totalDist >= 100, label: '100K God' },
+    streak_7: { check: (_, __, streak) => streak >= 7, label: '7-Day Streak' },
+    streak_30: { check: (_, __, streak) => streak >= 30, label: '30-Day Streak' },
+    streak_100: { check: (_, __, streak) => streak >= 100, label: '100-Day Streak' },
+};
 
 // ── POST /api/runs — Save a new run ─────────────────
 router.post('/', async (req, res) => {
@@ -31,11 +46,61 @@ router.post('/', async (req, res) => {
             xpEarned,
         });
 
-        res.status(201).json({
-            message: 'Run saved successfully',
-            run,
-        });
+        // ── Auto-update streak, weeklyXP, runDates, achievements ──
+        const user = await User.findById(req.userId);
+        if (user) {
+            const today = new Date().toISOString().split('T')[0]; // "2026-04-01"
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+            const lastRun = user.streak.lastRunDate
+                ? user.streak.lastRunDate.toISOString().split('T')[0]
+                : null;
+
+            // Update streak
+            if (lastRun === today) {
+                // Already ran today, no streak change
+            } else if (lastRun === yesterday) {
+                user.streak.current += 1;
+            } else {
+                user.streak.current = 1; // streak broken or first run
+            }
+            user.streak.longest = Math.max(user.streak.longest, user.streak.current);
+            user.streak.lastRunDate = new Date();
+
+            // Add today to runDates (for calendar)
+            if (!user.runDates.includes(today)) {
+                user.runDates.push(today);
+            }
+
+            // Add weeklyXP
+            user.weeklyXP = (user.weeklyXP || 0) + xpEarned;
+
+            // Check achievements
+            const allRuns = await Run.find({ user: req.userId });
+            const totalRuns = allRuns.length;
+            const totalDist = allRuns.reduce((s, r) => s + r.distance, 0);
+            const currentStreak = user.streak.current;
+            const newAchievements = [];
+
+            for (const [key, { check }] of Object.entries(ACHIEVEMENTS)) {
+                if (!user.achievements.includes(key) && check(totalRuns, totalDist, currentStreak)) {
+                    user.achievements.push(key);
+                    newAchievements.push(key);
+                }
+            }
+
+            await user.save();
+
+            res.status(201).json({
+                message: 'Run saved successfully',
+                run,
+                streak: user.streak.current,
+                newAchievements,
+            });
+        } else {
+            res.status(201).json({ message: 'Run saved successfully', run });
+        }
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Failed to save run' });
     }
 });
