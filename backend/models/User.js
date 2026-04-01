@@ -28,6 +28,34 @@ const userSchema = new mongoose.Schema(
             required: [true, 'Password is required'],
             minlength: 8,
         },
+        profilePic: {
+            type: String,
+            default: '',
+        },
+        // ── Streak tracking ──
+        streak: {
+            current: { type: Number, default: 0 },
+            longest: { type: Number, default: 0 },
+            lastRunDate: { type: Date, default: null },
+        },
+        runDates: {
+            type: [String], // ["2026-04-01", "2026-04-02", ...] for calendar
+            default: [],
+        },
+        // ── League system ──
+        league: {
+            name: { type: String, default: 'Bronze' },
+            joinedAt: { type: Date, default: Date.now },
+        },
+        weeklyXP: {
+            type: Number,
+            default: 0,
+        },
+        // ── Achievements ──
+        achievements: {
+            type: [String], // ["first_run", "5k_conqueror", "10_runs", ...]
+            default: [],
+        },
     },
     { timestamps: true }
 );
