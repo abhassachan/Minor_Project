@@ -15,6 +15,8 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/runs', require('./routes/runs'));
 app.use('/api/profile', require('./routes/profile'));
+app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/streak', require('./routes/streak'));
 
 // ── Health check ─────────────────────────────────────
 app.get('/', (req, res) => {
