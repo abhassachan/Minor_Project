@@ -8,6 +8,8 @@ export default function DashboardPage() {
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState(null);
     const [runs, setRuns] = useState([]);
+    const [streak, setStreak] = useState({ current: 0, longest: 0, runDates: [] });
+    const [profile, setProfile] = useState(null);
     const [filter, setFilter] = useState('all');
     const [expandedRun, setExpandedRun] = useState(null);
 
@@ -21,20 +23,30 @@ export default function DashboardPage() {
         }
         setUser(stored);
 
+        const headers = { 'Authorization': `Bearer ${token}` };
+
         // Fetch stats
-        fetch(`${API_BASE}/runs/stats`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
+        fetch(`${API_BASE}/runs/stats`, { headers })
             .then(r => r.json())
             .then(data => { if (data.stats) setStats(data.stats); })
             .catch(() => { });
 
         // Fetch runs
-        fetch(`${API_BASE}/runs`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
+        fetch(`${API_BASE}/runs`, { headers })
             .then(r => r.json())
             .then(data => { if (data.runs) setRuns(data.runs); })
+            .catch(() => { });
+
+        // Fetch streak
+        fetch(`${API_BASE}/streak`, { headers })
+            .then(r => r.json())
+            .then(data => { if (data.current !== undefined) setStreak(data); })
+            .catch(() => { });
+
+        // Fetch profile (for league info)
+        fetch(`${API_BASE}/profile`, { headers })
+            .then(r => r.json())
+            .then(data => { if (data.user) setProfile(data.user); })
             .catch(() => { });
     }, [navigate]);
 
@@ -47,6 +59,18 @@ export default function DashboardPage() {
     const ranks = ['Recruit', 'Scout', 'Patrol Runner', 'Zone Captain', 'District General', 'Territory Warlord'];
     const rank = ranks[Math.min(Math.floor(level / 3), ranks.length - 1)];
     const initials = (user?.name || 'RX').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const league = profile?.league?.name || 'Bronze';
+
+    // Get this week's run days for streak display
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        return d.toISOString().split('T')[0];
+    });
+    const ranThisWeek = weekDays.map(d => streak.runDates?.includes(d));
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -55,9 +79,9 @@ export default function DashboardPage() {
     };
 
     const challenges = [
-        { title: '5K Conqueror', desc: 'Run 5km in a single session', progress: 72, xp: 500, type: 'challenge' },
-        { title: 'Early Bird', desc: 'Complete 3 morning runs before 7 AM', progress: 33, xp: 300, type: 'challenge' },
-        { title: 'Zone Master', desc: 'Capture 10 different territories', progress: 60, xp: 750, type: 'challenge' },
+        { title: '5K Conqueror', desc: 'Run 5km in a single session', progress: Math.min(100, Math.round(((stats?.totalDistance || 0) / 5) * 100)), xp: 500, type: 'challenge' },
+        { title: 'Run Streak', desc: 'Keep a 7-day run streak', progress: Math.min(100, Math.round((streak.current / 7) * 100)), xp: 300, type: 'challenge' },
+        { title: 'Zone Master', desc: 'Capture 10 different territories', progress: Math.min(100, Math.round(((stats?.totalTerritories || 0) / 10) * 100)), xp: 750, type: 'challenge' },
     ];
 
     const rivals = [
@@ -290,14 +314,43 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* Weekly Streak */}
+                    {/* League Badge */}
                     <div className="card-base shadow-card p-5">
-                        <h3 className="font-heading text-lg mb-3">Weekly Streak</h3>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-heading text-lg">League</h3>
+                            <span className="text-[10px] bg-brand-teal/10 text-brand-teal px-2 py-0.5 rounded-full font-bold">{league.toUpperCase()}</span>
+                        </div>
+                        <div className="flex items-center gap-3 bg-brand-surface2 rounded-xl p-3">
+                            <div className="text-2xl">
+                                {league === 'Bronze' && '🥉'}
+                                {league === 'Silver' && '🥈'}
+                                {league === 'Gold' && '🥇'}
+                                {league === 'Platinum' && '💎'}
+                                {league === 'Diamond' && '💠'}
+                                {league === 'Legend' && '🏆'}
+                            </div>
+                            <div>
+                                <span className="text-[13px] font-semibold">{league} League</span>
+                                <p className="text-[11px] text-brand-muted">Weekly XP: {profile?.weeklyXP || 0}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Daily Streak */}
+                    <div className="card-base shadow-card p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-heading text-lg">Daily Streak</h3>
+                            <div className="flex items-center gap-1">
+                                <span className="text-lg">🔥</span>
+                                <span className="font-mono text-[16px] font-bold text-brand-orange">{streak.current}</span>
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-brand-muted mb-3">Longest: {streak.longest} days</p>
                         <div className="flex justify-between">
                             {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
                                 <div key={i} className="text-center">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 ${i < 3 ? 'bg-brand-teal text-white' : 'bg-brand-surface2 text-brand-muted'}`}>
-                                        {i < 3 ? '✓' : d}
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 ${ranThisWeek[i] ? 'bg-brand-teal text-white' : 'bg-brand-surface2 text-brand-muted'}`}>
+                                        {ranThisWeek[i] ? '✓' : d}
                                     </div>
                                     <span className="text-[9px] text-brand-muted">{d}</span>
                                 </div>
