@@ -39,42 +39,128 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
+// Helper: Haversine distance
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
 // ── GET /api/leaderboard/global — All-time rankings ──
 router.get('/global', auth, async (req, res) => {
     try {
-        const Run = require('../models/Run');
+        const tab = req.query.tab || 'distance'; // area, distance, loops
+        
+        let sortField = 'totalDistance';
+        if (tab === 'area') sortField = 'totalArea';
+        if (tab === 'loops') sortField = 'totalLoops';
 
-        // Aggregate total XP per user
-        const stats = await Run.aggregate([
-            { $group: { _id: '$user', totalXP: { $sum: '$xpEarned' }, totalDistance: { $sum: '$distance' }, totalRuns: { $sum: 1 } } },
-            { $sort: { totalXP: -1 } },
-            { $limit: 50 },
-        ]);
+        // Query users directly since we added these stats to User model in Phase A
+        let users = await User.find()
+            .select(`name username league profilePic ${sortField}`)
+            .sort({ [sortField]: -1 })
+            .limit(50);
 
-        // Populate user info
-        const userIds = stats.map(s => s._id);
-        const users = await User.find({ _id: { $in: userIds } }).select('name username league profilePic');
-        const userMap = {};
-        users.forEach(u => { userMap[u._id.toString()] = u; });
-
-        const rankings = stats.map((s, i) => {
-            const u = userMap[s._id.toString()];
-            return {
-                rank: i + 1,
-                name: u?.name || 'Unknown',
-                username: u?.username || '',
-                totalXP: s.totalXP,
-                totalDistance: s.totalDistance,
-                totalRuns: s.totalRuns,
-                league: u?.league?.name || 'Bronze',
-                profilePic: u?.profilePic || '',
-                isYou: s._id.toString() === req.userId,
-            };
-        });
+        const rankings = users.map((u, i) => ({
+            rank: i + 1,
+            name: u.name || 'Unknown',
+            username: u.username || '',
+            score: u[sortField] || 0,
+            league: u.league?.name || 'Bronze',
+            profilePic: u.profilePic || '',
+            isYou: u._id.toString() === req.userId,
+        }));
 
         res.json({ rankings });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch global leaderboard' });
+    }
+});
+
+// ── GET /api/leaderboard/local — Local rankings within 10km ──
+router.get('/local', auth, async (req, res) => {
+    try {
+        const { lat, lng, tab } = req.query;
+        if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
+
+        let sortField = 'totalDistance';
+        if (tab === 'area') sortField = 'totalArea';
+        if (tab === 'loops') sortField = 'totalLoops';
+
+        // Fetch all users (in a real app, use MongoDB Geospatial $near index)
+        const allUsers = await User.find().select(`name username league profilePic ${sortField}`);
+        
+        // Let's assume we can get last known coordinates for user from their recent runs
+        // For now, if we don't have location on User, we simulate it or rely on runs.
+        const Run = require('../models/Run');
+        
+        // Find recent runs near this location to identify local users
+        const recentRuns = await Run.find().select('user route distance').limit(500);
+        const localUserIds = new Set();
+        
+        recentRuns.forEach(run => {
+            if (run.route && run.route.length > 0) {
+                // Check if run started near the requested lat/lng
+                const runLat = run.route[0][0];
+                const runLng = run.route[0][1];
+                if (haversineDistance(parseFloat(lat), parseFloat(lng), runLat, runLng) <= 10000) { // 10km
+                    localUserIds.add(run.user.toString());
+                }
+            }
+        });
+
+        const localUsers = allUsers
+            .filter(u => localUserIds.has(u._id.toString()) || u._id.toString() === req.userId)
+            .sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0))
+            .slice(0, 50);
+
+        const rankings = localUsers.map((u, i) => ({
+            rank: i + 1,
+            name: u.name,
+            username: u.username,
+            score: u[sortField] || 0,
+            league: u.league?.name || 'Bronze',
+            profilePic: u.profilePic || '',
+            isYou: u._id.toString() === req.userId,
+        }));
+
+        res.json({ rankings });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch local leaderboard' });
+    }
+});
+
+// ── GET /api/leaderboard/clan/:clanId ──
+router.get('/clan/:clanId', auth, async (req, res) => {
+    try {
+        const tab = req.query.tab || 'distance';
+        let sortField = 'totalDistance';
+        if (tab === 'area') sortField = 'totalArea';
+        if (tab === 'loops') sortField = 'totalLoops';
+
+        const clanUsers = await User.find({ clanId: req.params.clanId })
+            .select(`name username league profilePic ${sortField}`)
+            .sort({ [sortField]: -1 });
+
+        const rankings = clanUsers.map((u, i) => ({
+            rank: i + 1,
+            name: u.name,
+            username: u.username,
+            score: u[sortField] || 0,
+            league: u.league?.name || 'Bronze',
+            profilePic: u.profilePic || '',
+            isYou: u._id.toString() === req.userId,
+        }));
+
+        res.json({ rankings });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch clan leaderboard' });
     }
 });
 
