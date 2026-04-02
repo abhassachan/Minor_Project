@@ -74,6 +74,11 @@ router.post('/', async (req, res) => {
             // Add weeklyXP
             user.weeklyXP = (user.weeklyXP || 0) + xpEarned;
 
+            // Add Lifetime stats for the Leaderboards
+            user.totalDistance = (user.totalDistance || 0) + distance;
+            user.totalSteps = (user.totalSteps || 0) + (steps || 0);
+            user.totalLoops = (user.totalLoops || 0) + (territoriesCaptured || 0);
+
             // Check achievements
             const allRuns = await Run.find({ user: req.userId });
             const totalRuns = allRuns.length;
