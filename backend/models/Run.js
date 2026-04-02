@@ -39,6 +39,10 @@ const runSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        splits: {
+            type: [mongoose.Schema.Types.Mixed], // store km splits data e.g. [{ km: 1, time: 300, pace: 5.0 }]
+            default: [],
+        },
     },
     { timestamps: true }
 );
