@@ -56,6 +56,21 @@ const userSchema = new mongoose.Schema(
             type: [String], // ["first_run", "5k_conqueror", "10_runs", ...]
             default: [],
         },
+        // ── Clan & Territories ──
+        clanId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Clan',
+            default: null,
+        },
+        city: {
+            type: String, // Location for local leaderboards
+            default: '',
+        },
+        // ── Lifetime Stats ──
+        totalDistance: { type: Number, default: 0 },
+        totalSteps: { type: Number, default: 0 },
+        totalLoops: { type: Number, default: 0 },
+        totalArea: { type: Number, default: 0 }, // Total controlled area
     },
     { timestamps: true }
 );
