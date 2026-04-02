@@ -17,7 +17,7 @@ router.post('/', auth, async (req, res) => {
         const { name } = req.body;
         if (!name) return res.status(400).json({ error: 'Clan name is required' });
 
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.userId);
         if (user.clanId) {
             return res.status(400).json({ error: 'You are already in a clan' });
         }
@@ -34,8 +34,8 @@ router.post('/', auth, async (req, res) => {
         const newClan = new Clan({
             name,
             code,
-            creator: req.user.id,
-            members: [req.user.id] // Creator is the first member
+            creator: req.userId,
+            members: [req.userId] // Creator is the first member
         });
 
         await newClan.save();
@@ -58,7 +58,7 @@ router.post('/join', auth, async (req, res) => {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: 'Clan code is required' });
 
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.userId);
         if (user.clanId) {
             return res.status(400).json({ error: 'You are already in a clan. Leave it first.' });
         }
@@ -69,7 +69,7 @@ router.post('/join', auth, async (req, res) => {
         }
 
         // Add user to clan members
-        clan.members.push(req.user.id);
+        clan.members.push(req.userId);
         await clan.save();
 
         // Update user
