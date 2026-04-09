@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Trophy, MapPin, Users, Globe, ChevronUp, ChevronDown, Activity, Map, Route } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Trophy, MapPin, Users, Globe, Activity, Map, Route } from 'lucide-react';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 export default function LeaderboardPage() {
-    const [tab, setTab] = useState('global'); // 'global', 'local', 'clan'
-    const [sortBy, setSortBy] = useState('distance'); // 'distance', 'area', 'loops'
+    const [tab, setTab] = useState('global');
+    const [sortBy, setSortBy] = useState('distance');
     const [rankings, setRankings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userClanId, setUserClanId] = useState(null);
     const [currentUserId, setCurrentUserId] = useState(null);
 
+    // Load user info once on mount
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
         setUserClanId(storedUser.clanId || null);
         setCurrentUserId(storedUser.id || storedUser._id);
-        fetchLeaderboard();
-    }, [tab, sortBy]);
+    }, []);
 
-    const fetchLeaderboard = async () => {
+    const fetchLeaderboard = useCallback(async () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         try {
@@ -38,23 +38,33 @@ export default function LeaderboardPage() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            
+
             if (tab === 'clan') {
-                // Formatting clan array into universal ranking structure
-                let sorted = data.map(u => ({
-                    user: u,
-                    score: sortBy === 'area' ? (u.totalArea || 0) : sortBy === 'distance' ? (u.totalDistance || 0) : (u.totalLoops || 0),
-                })).sort((a, b) => b.score - a.score).map((item, index) => ({...item, rank: index + 1}));
+                const sorted = data
+                    .map(u => ({
+                        user: u,
+                        score: sortBy === 'area' ? (u.totalArea || 0)
+                            : sortBy === 'distance' ? (u.totalDistance || 0)
+                            : (u.totalLoops || 0),
+                    }))
+                    .sort((a, b) => b.score - a.score)
+                    .map((item, index) => ({ ...item, rank: index + 1 }));
                 setRankings(sorted);
             } else {
                 setRankings(data.rankings || []);
             }
         } catch (err) {
             console.error('Failed to fetch leaderboard:', err);
+            setRankings([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [tab, sortBy, userClanId]);
+
+    // Fetch whenever tab, sortBy, or userClanId changes
+    useEffect(() => {
+        fetchLeaderboard();
+    }, [fetchLeaderboard]);
 
     const getRankStyle = (rank) => {
         if (rank === 1) return 'bg-amber-400 text-amber-900 shadow-[0_0_15px_rgba(251,191,36,0.5)] border border-amber-300';
@@ -106,8 +116,8 @@ export default function LeaderboardPage() {
                     ].map(s => (
                         <button key={s.id} onClick={() => setSortBy(s.id)}
                             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap ${
-                                sortBy === s.id 
-                                ? 'bg-brand-teal/10 border-brand-teal text-brand-teal shadow-sm' 
+                                sortBy === s.id
+                                ? 'bg-brand-teal/10 border-brand-teal text-brand-teal shadow-sm'
                                 : 'bg-white border-brand-border text-brand-muted hover:bg-slate-50'
                             }`}>
                             <s.icon size={14} />
@@ -116,7 +126,7 @@ export default function LeaderboardPage() {
                     ))}
                 </div>
 
-                {/* Clan Verification state */}
+                {/* No clan state */}
                 {tab === 'clan' && !userClanId && (
                     <div className="mt-12 text-center">
                         <div className="w-20 h-20 bg-brand-surface2 rounded-full flex items-center justify-center mx-auto mb-4 border border-brand-border">
@@ -137,13 +147,13 @@ export default function LeaderboardPage() {
                         {rankings.map((r, i) => {
                             const isMe = r.user._id === currentUserId;
                             const initials = (r.user.name || 'Runner').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-                            
+
                             return (
-                                <div key={r.user._id || i} 
+                                <div key={r.user._id || i}
                                     className={`relative flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                                         isMe ? 'bg-white border-2 border-brand-teal shadow-sm z-10' : 'bg-white border border-brand-border shadow-sm'
                                     }`}>
-                                    
+
                                     {/* Rank Number */}
                                     <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full font-bold text-sm ${getRankStyle(r.rank)}`}>
                                         {r.rank}
@@ -158,7 +168,7 @@ export default function LeaderboardPage() {
                                     {/* Name & Stats */}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-[15px] truncate flex items-center gap-2">
-                                            {r.user.name} 
+                                            {r.user.name}
                                             {isMe && <span className="text-[10px] bg-brand-teal/10 text-brand-teal px-2 py-0.5 rounded-full uppercase tracking-wide">You</span>}
                                         </h3>
                                         <p className="text-[12px] text-brand-muted truncate">
@@ -180,7 +190,7 @@ export default function LeaderboardPage() {
                             );
                         })}
 
-                        {rankings.length === 0 && tab !== 'clan' && !loading && (
+                        {rankings.length === 0 && !(tab === 'clan' && !userClanId) && !loading && (
                             <div className="text-center py-10 text-brand-muted text-sm">
                                 No runners found in this category yet.
                             </div>
