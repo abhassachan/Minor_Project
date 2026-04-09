@@ -1,8 +1,130 @@
+import { useState, useEffect } from 'react';
+import { User, Activity, Map, Trophy, Settings, Medal, LogOut, Hexagon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 export default function ProfilePage() {
+    const [user, setUser] = useState({});
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        setUser(storedUser);
+    }, []);
+
+    const logout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/');
+    };
+
+    const initials = (user.name || 'Runner').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
     return (
-        <div className="min-h-screen bg-brand-offwhite p-6 font-body text-brand-ink">
-            <h1 className="text-3xl font-heading mb-4">Profile</h1>
-            <p className="text-brand-muted">User settings coming soon...</p>
+        <div className="min-h-[100dvh] bg-[#f8fafc] font-body text-brand-ink pb-24">
+            {/* Header & Avatar */}
+            <div className="bg-gradient-to-br from-brand-ink via-slate-800 to-brand-teal text-white pt-16 pb-12 px-6 rounded-b-[2.5rem] relative shadow-lg">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                
+                <div className="flex justify-between items-start mb-6 relative z-10">
+                    <h1 className="text-3xl font-heading font-black">Profile</h1>
+                    <button className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition backdrop-blur-sm">
+                        <Settings size={20} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-5 relative z-10">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-orange to-amber-500 flex items-center justify-center text-3xl font-black shadow-lg border-2 border-white/20">
+                        {initials}
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold">{user.name}</h2>
+                        <p className="text-white/60 text-sm flex items-center gap-1.5 mt-1">
+                            @{user.username || 'runner'} • <span className="uppercase text-[10px] tracking-widest font-bold bg-brand-teal/30 px-2 py-0.5 rounded text-brand-teal-light">{user.league?.name || 'Bronze'} League</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-5 -mt-6 relative z-20 space-y-4">
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                        <div className="w-10 h-10 bg-brand-teal/10 rounded-xl flex items-center justify-center text-brand-teal">
+                            <Activity size={20} />
+                        </div>
+                        <div>
+                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Distance</div>
+                            <div className="font-mono font-bold text-lg">{user.totalDistance?.toFixed(1) || '0.0'} <span className="text-[10px]">km</span></div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                        <div className="w-10 h-10 bg-brand-orange/10 rounded-xl flex items-center justify-center text-brand-orange">
+                            <Map size={20} />
+                        </div>
+                        <div>
+                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Territory</div>
+                            <div className="font-mono font-bold text-lg">{user.totalArea || 0} <span className="text-[10px]">m²</span></div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                        <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500">
+                            <Trophy size={20} />
+                        </div>
+                        <div>
+                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Missions</div>
+                            <div className="font-mono font-bold text-lg">{user.totalLoops || 0} <span className="text-[10px]">won</span></div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
+                            <Hexagon size={20} />
+                        </div>
+                        <div>
+                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Level XP</div>
+                            <div className="font-mono font-bold text-lg">{user.weeklyXP || 0}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Achievements Section */}
+                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-brand-border mt-4">
+                    <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
+                        <Medal size={20} className="text-amber-400" /> Trophy Cabinet
+                    </h3>
+                    
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {user.achievements && user.achievements.length > 0 ? (
+                            user.achievements.map((ach, i) => (
+                                <div key={i} className="min-w-[80px] flex flex-col items-center gap-2 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-200 to-amber-500 border-4 border-amber-100 flex items-center justify-center shadow-inner">
+                                        <Trophy className="text-white" size={24} />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-brand-ink uppercase leading-tight">{ach.replace('_', ' ')}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-sm text-brand-muted text-center w-full py-4 bg-brand-surface2 rounded-xl">
+                                No achievements yet. Start running!
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Account Actions */}
+                <div className="pt-4">
+                    <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-red-50 text-red-600 font-bold border border-red-100 hover:bg-red-100 transition-colors">
+                        <LogOut size={18} /> Sign Out
+                    </button>
+                    <div className="text-center mt-6 py-4">
+                         <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Territory Run v1.0.0</p>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 }

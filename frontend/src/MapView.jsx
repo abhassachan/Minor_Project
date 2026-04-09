@@ -1,8 +1,33 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
+import L from 'leaflet'
 import {
   MapContainer, TileLayer, Marker, Popup,
   Polyline, Polygon, useMap,
 } from 'react-leaflet'
+
+// Blue pulsing location dot icon
+const blueDotIcon = L.divIcon({
+  className: '',
+  html: `
+    <div style="position:relative;width:22px;height:22px">
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        background:rgba(59,130,246,0.25);
+        animation:pulse-ring 1.8s ease-out infinite;
+      "></div>
+      <div style="
+        position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        width:14px;height:14px;border-radius:50%;
+        background:#3b82f6;
+        border:2.5px solid #fff;
+        box-shadow:0 0 8px rgba(59,130,246,0.8);
+      "></div>
+    </div>
+  `,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+})
 
 const METERS_PER_DEG_LAT = 111320
 const MIN_DISTANCE_FOR_METRICS = 0.01
@@ -83,11 +108,14 @@ export default function MapView() {
   const [saveMessage, setSaveMessage] = useState('')
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
-  const [isDarkMap, setIsDarkMap] = useState(true)   // ← theme state
+  const [isDarkMap, setIsDarkMap] = useState(true)
 
   const timerRef = useRef(null)
   const lastAccelRef = useRef(0)
   const lastStepTimeRef = useRef(0)
+  const stepPhaseRef = useRef('idle')
+  const stepPeakRef = useRef(0)
+  const recentMagsRef = useRef([])
   const lastMovementTimeRef = useRef(Date.now())
   const lastGpsTimeRef = useRef(null)
   const lastGpsPosRef = useRef(null)
@@ -127,7 +155,7 @@ export default function MapView() {
     if (theme !== null) setIsDarkMap(theme === 'true')
   }, [])
 
-  // Persist theme preference
+  // Persist theme
   useEffect(() => {
     localStorage.setItem('darkMap', isDarkMap)
   }, [isDarkMap])
@@ -217,20 +245,47 @@ export default function MapView() {
     return () => clearInterval(timerRef.current)
   }, [isRunning, isAutoPaused])
 
-  // Motion
+  // Motion — peak-valley step detection
   useEffect(() => {
     const handleMotion = (e) => {
       const acc = e.accelerationIncludingGravity; if (!acc) return
       const mag = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2)
-      const diff = Math.abs(mag - lastAccelRef.current)
-      lastAccelRef.current = mag
       const now = Date.now()
-      if (mag > 12) { lastMovementTimeRef.current = now; if (isAutoPausedRef.current) setIsAutoPaused(false) }
+
+      // Auto-pause detection
+      if (mag > 11) { lastMovementTimeRef.current = now; if (isAutoPausedRef.current) setIsAutoPaused(false) }
       if (isRunningRef.current && now - lastMovementTimeRef.current > 3000 && !isAutoPausedRef.current) setIsAutoPaused(true)
-      if (diff > 2.5 && now - lastStepTimeRef.current > 450) {
-        if (isRunningRef.current && !isAutoPausedRef.current) setSteps((s) => s + 1)
-        lastStepTimeRef.current = now
+
+      // Dynamic threshold using rolling average of last 20 readings
+      const win = recentMagsRef.current
+      win.push(mag)
+      if (win.length > 20) win.shift()
+      const avg = win.reduce((a, b) => a + b, 0) / win.length
+      const threshold = avg + 2.0
+
+      // Peak-valley detection — one step = rise above threshold then fall below
+      const phase = stepPhaseRef.current
+      if (phase === 'idle' || phase === 'valley') {
+        if (mag > threshold) {
+          stepPhaseRef.current = 'rising'
+          stepPeakRef.current = mag
+        }
+      } else if (phase === 'rising') {
+        if (mag > stepPeakRef.current) {
+          stepPeakRef.current = mag
+        } else if (mag < threshold) {
+          const timeSinceLast = now - lastStepTimeRef.current
+          if (timeSinceLast > 400 && timeSinceLast < 2000) {
+            if (isRunningRef.current && !isAutoPausedRef.current) setSteps((s) => s + 1)
+            lastStepTimeRef.current = now
+          } else if (timeSinceLast >= 2000) {
+            lastStepTimeRef.current = now
+          }
+          stepPhaseRef.current = 'valley'
+        }
       }
+
+      lastAccelRef.current = mag
     }
     window.addEventListener('devicemotion', handleMotion)
     return () => window.removeEventListener('devicemotion', handleMotion)
@@ -244,6 +299,7 @@ export default function MapView() {
     lastMovementTimeRef.current = Date.now()
     nextSplitKmRef.current = 1; lastSplitTimeRef.current = 0; durationRef.current = 0
     setCurrentLoopStart(null); setLoopSegmentLen(0)
+    stepPhaseRef.current = 'idle'; stepPeakRef.current = 0; recentMagsRef.current = []
     setIsAutoPaused(false); setIsRunning(true)
   }
 
@@ -256,11 +312,9 @@ export default function MapView() {
     const pace = distKm > 0 && duration > 0 ? duration / distKm : 0
     const newRun = { id: Date.now(), date: new Date().toLocaleString(), distance: distKm, duration, steps, calories: cal, path, splits }
 
-    // Save to localStorage (offline-first)
     const updated = [newRun, ...runs]
     setRuns(updated); localStorage.setItem('runs', JSON.stringify(updated))
 
-    // Save to backend API
     const token = localStorage.getItem('token')
     if (token) {
       try {
@@ -268,21 +322,12 @@ export default function MapView() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
-            distance: distKm,
-            duration,
-            steps,
-            calories: cal,
-            pace,
-            route: path,
-            territoriesCaptured: territories.length,
+            distance: distKm, duration, steps, calories: cal,
+            pace, route: path, territoriesCaptured: territories.length,
           }),
         })
-        if (res.ok) {
-          setSaveMessage('Run saved to cloud ✓')
-        } else {
-          setSaveMessage('Run saved locally (cloud sync failed)')
-        }
-      } catch (err) {
+        setSaveMessage(res.ok ? 'Run saved to cloud ✓' : 'Run saved locally (cloud sync failed)')
+      } catch {
         setSaveMessage('Run saved locally (offline)')
       }
     } else {
@@ -328,7 +373,13 @@ export default function MapView() {
       {loopFlash && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(34,197,94,0.2)', pointerEvents: 'none', animation: 'fadeOut 0.8s ease forwards' }} />
       )}
-      <style>{`@keyframes fadeOut { from{opacity:1} to{opacity:0} }`}</style>
+      <style>{`
+        @keyframes fadeOut { from{opacity:1} to{opacity:0} }
+        @keyframes pulse-ring {
+          0%   { transform:scale(0.5); opacity:0.8; }
+          100% { transform:scale(2.2); opacity:0; }
+        }
+      `}</style>
 
       {/* ── CONTROL PANEL ── */}
       <div style={{ ...panelStyle, top: 12, left: 12, width: isPanelCollapsed ? 'auto' : 240 }}>
@@ -378,10 +429,8 @@ export default function MapView() {
         )}
       </div>
 
-      {/* ── TOP RIGHT: SPLITS + THEME TOGGLE stacked ── */}
+      {/* ── TOP RIGHT: SPLITS + THEME TOGGLE ── */}
       <div style={{ position: 'absolute', zIndex: 1000, top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-
-        {/* Theme toggle button */}
         <button
           onClick={() => setIsDarkMap(v => !v)}
           style={{
@@ -392,8 +441,7 @@ export default function MapView() {
             fontSize: 13, color: '#f1f5f9',
             boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', gap: 6,
-            transition: 'background 0.2s',
-            userSelect: 'none',
+            transition: 'background 0.2s', userSelect: 'none',
           }}
         >
           {isDarkMap ? '☀️' : '🌙'}
@@ -402,7 +450,6 @@ export default function MapView() {
           </span>
         </button>
 
-        {/* Splits panel — appears below toggle when there are splits */}
         {displaySplits.length > 0 && (
           <div style={{ background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)', color: '#f1f5f9', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', fontFamily: '"JetBrains Mono","Fira Code",monospace', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '12px 14px', width: 160 }}>
             <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.5, marginBottom: 8 }}>KM Splits</div>
@@ -419,7 +466,7 @@ export default function MapView() {
       </div>
 
       {/* ── RUN HISTORY ── */}
-      <div style={{ ...panelStyle, bottom: 12, left: 12, width: 240, fontSize: 13 }}>
+      <div style={{ ...panelStyle, bottom: 76, left: 12, width: 240, fontSize: 13 }}>
         <div onClick={() => setIsHistoryCollapsed(v => !v)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', cursor: 'pointer', userSelect: 'none' }}>
           <span style={{ fontWeight: 700, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.6 }}>Run History {runs.length > 0 && `(${runs.length})`}</span>
           <span style={{ fontSize: 12, opacity: 0.4, transform: isHistoryCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s' }}>▲</span>
@@ -440,29 +487,31 @@ export default function MapView() {
       </div>
 
       {/* ── MAP ── */}
-      <MapContainer center={position} zoom={16} style={{ height: '100vh', width: '100%' }}>
-        <TileLayer key={isDarkMap ? 'dark' : 'light'} url={tile.url} attribution={tile.attribution} />
-        <RecenterMap position={position} isRunning={isRunning} />
-        <Marker position={position}><Popup>You are here</Popup></Marker>
+      <div style={{ height: 'calc(100vh - 64px)', width: '100%', position: 'relative' }}>
+        <MapContainer center={position} zoom={16} style={{ height: '100%', width: '100%' }}>
+          <TileLayer key={isDarkMap ? 'dark' : 'light'} url={tile.url} attribution={tile.attribution} />
+          <RecenterMap position={position} isRunning={isRunning} />
+          <Marker position={position} icon={blueDotIcon} />
 
-        {territories.map(t => (
-          <Polygon key={t.id} positions={t.points}
-            pathOptions={{ color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.3 }} />
-        ))}
+          {territories.map(t => (
+            <Polygon key={t.id} positions={t.points}
+              pathOptions={{ color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.3 }} />
+          ))}
 
-        {displayPath.length > 1 && <Polyline positions={displayPath} color="#ef4444" weight={3} />}
+          {displayPath.length > 1 && <Polyline positions={displayPath} color="#ef4444" weight={3} />}
 
-        {isRunning && currentSegmentRef.current.length > 1 && (
-          <Polyline positions={currentSegmentRef.current}
-            pathOptions={{ color: '#f97316', weight: 2, dashArray: '6 4', opacity: 0.8 }} />
-        )}
+          {isRunning && currentSegmentRef.current.length > 1 && (
+            <Polyline positions={currentSegmentRef.current}
+              pathOptions={{ color: '#f97316', weight: 2, dashArray: '6 4', opacity: 0.8 }} />
+          )}
 
-        {isRunning && currentLoopStart && (
-          <Marker position={currentLoopStart}>
-            <Popup>Loop start — run back here to capture territory!</Popup>
-          </Marker>
-        )}
-      </MapContainer>
+          {isRunning && currentLoopStart && (
+            <Marker position={currentLoopStart}>
+              <Popup>Loop start — run back here to capture territory!</Popup>
+            </Marker>
+          )}
+        </MapContainer>
+      </div>
     </>
   )
 }
