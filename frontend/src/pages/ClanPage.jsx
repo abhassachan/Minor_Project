@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Plus, KeyRound, Shield, Trophy, Activity, Map } from 'lucide-react';
 
-const API_BASE = `http://${window.location.hostname}:5000/api`;
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function ClanPage() {
     const [user, setUser] = useState(null);
