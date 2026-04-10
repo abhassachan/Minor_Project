@@ -51,7 +51,12 @@ export default function LeaderboardPage() {
                     .map((item, index) => ({ ...item, rank: index + 1 }));
                 setRankings(sorted);
             } else {
-                setRankings(data.rankings || []);
+                const items = (data.rankings || []).map(r => ({
+                    user: { _id: r._id || r.rank, name: r.name, username: r.username, league: { name: r.league || 'Bronze' }, city: r.city },
+                    score: r.score || 0,
+                    rank: r.rank,
+                }));
+                setRankings(items);
             }
         } catch (err) {
             console.error('Failed to fetch leaderboard:', err);
