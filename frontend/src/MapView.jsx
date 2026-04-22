@@ -1,28 +1,18 @@
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import L from 'leaflet'
 import {
   MapContainer, TileLayer, Marker, Popup,
   Polyline, Polygon, useMap,
 } from 'react-leaflet'
+import { fetchAllTerritories, syncPendingTerritories } from './territoriesAPI'
 
 // Blue pulsing location dot icon
 const blueDotIcon = L.divIcon({
   className: '',
   html: `
     <div style="position:relative;width:22px;height:22px">
-      <div style="
-        position:absolute;inset:0;border-radius:50%;
-        background:rgba(59,130,246,0.25);
-        animation:pulse-ring 1.8s ease-out infinite;
-      "></div>
-      <div style="
-        position:absolute;top:50%;left:50%;
-        transform:translate(-50%,-50%);
-        width:14px;height:14px;border-radius:50%;
-        background:#3b82f6;
-        border:2.5px solid #fff;
-        box-shadow:0 0 8px rgba(59,130,246,0.8);
-      "></div>
+      <div style="position:absolute;inset:0;border-radius:50%;background:rgba(59,130,246,0.25);animation:pulse-ring 1.8s ease-out infinite;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2.5px solid #fff;box-shadow:0 0 8px rgba(59,130,246,0.8);"></div>
     </div>
   `,
   iconSize: [22, 22],
@@ -68,6 +58,27 @@ function polygonArea(points) {
   return Math.abs(area) / 2
 }
 
+// Get color for a territory polygon based on ownership
+function getTerritoryColor(territory, currentUserId, currentUserClanId) {
+  if (!territory.ownerId) return { color: '#94a3b8', fill: '#94a3b8' } // unclaimed — grey
+
+  const isOwner = territory.ownerId === currentUserId
+  const isClan = currentUserClanId && territory.ownerClanId === currentUserClanId
+
+  if (isOwner) {
+    // Check if contested — someone has count within 2 of yours
+    const myCount = territory.counts?.find(c => c.userId === currentUserId)?.count || 0
+    const topChallenger = territory.counts?.filter(c => c.userId !== currentUserId)?.[0]?.count || 0
+    const contested = myCount - topChallenger <= 2 && topChallenger > 0
+    return contested
+      ? { color: '#eab308', fill: '#eab308' }  // yellow — contested
+      : { color: '#22c55e', fill: '#22c55e' }  // green — yours
+  }
+
+  if (isClan) return { color: '#3b82f6', fill: '#3b82f6' }  // blue — clan
+  return { color: '#ef4444', fill: '#ef4444' }               // red — enemy
+}
+
 function RecenterMap({ position, isRunning }) {
   const map = useMap()
   useEffect(() => { if (position && isRunning) map.setView(position) }, [position, isRunning, map])
@@ -98,7 +109,12 @@ export default function MapView() {
   const [isAutoPaused, setIsAutoPaused] = useState(false)
   const [liveSpeed, setLiveSpeed] = useState(0)
   const [splits, setSplits] = useState([])
+
+  // Local territories (yours, saved to localStorage)
   const [territories, setTerritories] = useState([])
+  // All territories from backend (all users)
+  const [globalTerritories, setGlobalTerritories] = useState([])
+
   const [loopFlash, setLoopFlash] = useState(false)
   const [currentLoopStart, setCurrentLoopStart] = useState(null)
   const [loopSegmentLen, setLoopSegmentLen] = useState(0)
@@ -109,6 +125,14 @@ export default function MapView() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
   const [isDarkMap, setIsDarkMap] = useState(true)
+  const [syncStatus, setSyncStatus] = useState('')  // shows sync result
+
+  // Current user info
+  const currentUser = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
+  }, [])
+  const currentUserId = currentUser?._id || currentUser?.id || null
+  const currentUserClanId = currentUser?.clanId || null
 
   const timerRef = useRef(null)
   const lastAccelRef = useRef(0)
@@ -147,12 +171,15 @@ export default function MapView() {
     setDeferredPrompt(null); setIsInstallable(false)
   }
 
-  // Load storage
+  // Load local storage + fetch global territories
   useEffect(() => {
     const r = localStorage.getItem('runs'); if (r) setRuns(JSON.parse(r))
     const t = localStorage.getItem('territories'); if (t) setTerritories(JSON.parse(t))
     const theme = localStorage.getItem('darkMap')
     if (theme !== null) setIsDarkMap(theme === 'true')
+
+    // Fetch all territories from backend for map overlay
+    fetchAllTerritories().then(setGlobalTerritories)
   }, [])
 
   // Persist theme
@@ -180,7 +207,14 @@ export default function MapView() {
             const polygon = [...seg, newPos]
             const area = polygonArea(polygon)
             if (area > 100) {
-              const newT = { id: Date.now(), points: polygon, area }
+              // Save locally with status: 'pending' — will sync when run stops
+              const newT = {
+                id: Date.now(),
+                points: polygon,
+                area,
+                status: 'pending',   // ← pending = not yet synced to backend
+                capturedAt: new Date().toISOString(),
+              }
               setTerritories((prev) => {
                 const updated = [...prev, newT]
                 localStorage.setItem('territories', JSON.stringify(updated))
@@ -252,24 +286,18 @@ export default function MapView() {
       const mag = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2)
       const now = Date.now()
 
-      // Auto-pause detection
       if (mag > 11) { lastMovementTimeRef.current = now; if (isAutoPausedRef.current) setIsAutoPaused(false) }
       if (isRunningRef.current && now - lastMovementTimeRef.current > 3000 && !isAutoPausedRef.current) setIsAutoPaused(true)
 
-      // Dynamic threshold using rolling average of last 20 readings
       const win = recentMagsRef.current
       win.push(mag)
       if (win.length > 20) win.shift()
       const avg = win.reduce((a, b) => a + b, 0) / win.length
       const threshold = avg + 2.0
 
-      // Peak-valley detection — one step = rise above threshold then fall below
       const phase = stepPhaseRef.current
       if (phase === 'idle' || phase === 'valley') {
-        if (mag > threshold) {
-          stepPhaseRef.current = 'rising'
-          stepPeakRef.current = mag
-        }
+        if (mag > threshold) { stepPhaseRef.current = 'rising'; stepPeakRef.current = mag }
       } else if (phase === 'rising') {
         if (mag > stepPeakRef.current) {
           stepPeakRef.current = mag
@@ -284,7 +312,6 @@ export default function MapView() {
           stepPhaseRef.current = 'valley'
         }
       }
-
       lastAccelRef.current = mag
     }
     window.addEventListener('devicemotion', handleMotion)
@@ -293,7 +320,7 @@ export default function MapView() {
 
   const handleStart = () => {
     setSelectedRun(null); setPath([]); setDistance(0); setDuration(0)
-    setSteps(0); setLiveSpeed(0); setSplits([]); setSaveMessage('')
+    setSteps(0); setLiveSpeed(0); setSplits([]); setSaveMessage(''); setSyncStatus('')
     currentSegmentRef.current = []; segmentDistRef.current = 0
     lastGpsTimeRef.current = null; lastGpsPosRef.current = null
     lastMovementTimeRef.current = Date.now()
@@ -306,32 +333,54 @@ export default function MapView() {
   const handleStop = async () => {
     setIsRunning(false); setIsAutoPaused(false); setLiveSpeed(0)
     setCurrentLoopStart(null); currentSegmentRef.current = []; segmentDistRef.current = 0
+
     if (distance < 5) { setSaveMessage('Run too short to save (< 5m)'); return }
+
     const distKm = distance / 1000
     const cal = Number((steps * 0.04).toFixed(1))
     const pace = distKm > 0 && duration > 0 ? duration / distKm : 0
     const newRun = { id: Date.now(), date: new Date().toLocaleString(), distance: distKm, duration, steps, calories: cal, path, splits }
 
+    // Save run to localStorage
     const updated = [newRun, ...runs]
     setRuns(updated); localStorage.setItem('runs', JSON.stringify(updated))
 
     const token = localStorage.getItem('token')
+
     if (token) {
+      // Save run to backend
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/runs`, {
+        const res = await fetch(`http://${window.location.hostname}:5000/api/runs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
             distance: distKm, duration, steps, calories: cal,
-            pace, route: path, territoriesCaptured: territories.length,
+            pace, route: path, territoriesCaptured: territories.filter(t => t.status === 'pending').length,
           }),
         })
         setSaveMessage(res.ok ? 'Run saved to cloud ✓' : 'Run saved locally (cloud sync failed)')
       } catch {
         setSaveMessage('Run saved locally (offline)')
       }
+
+      // Sync all pending territories to backend
+      const pendingCount = territories.filter(t => t.status === 'pending').length
+      if (pendingCount > 0) {
+        setSyncStatus(`Syncing ${pendingCount} territories…`)
+        const { synced, failed } = await syncPendingTerritories(token)
+        if (failed === 0) {
+          setSyncStatus(`${synced} territor${synced === 1 ? 'y' : 'ies'} synced ✓`)
+        } else {
+          setSyncStatus(`${synced} synced, ${failed} failed`)
+        }
+        // Refresh global territories after sync
+        fetchAllTerritories().then(setGlobalTerritories)
+        // Reload local territories from localStorage (now marked synced)
+        const refreshed = localStorage.getItem('territories')
+        if (refreshed) setTerritories(JSON.parse(refreshed))
+      }
     } else {
-      setSaveMessage('Run saved ✓ (log in to sync)')
+      setSaveMessage('Run saved ✓ (log in to sync territories)')
     }
   }
 
@@ -346,6 +395,19 @@ export default function MapView() {
   const canClose = loopSegmentLen >= LOOP_MIN_DISTANCE
   const needsMore = LOOP_MIN_DISTANCE - loopSegmentLen
   const tile = isDarkMap ? TILES.dark : TILES.light
+
+  // Merge: globalTerritories for display, fallback to local if backend unavailable
+  // Local pending ones shown in green always
+  const territoriesForMap = useMemo(() => {
+    if (globalTerritories.length > 0) return globalTerritories
+    // Fallback: show local territories as green
+    return territories.map(t => ({
+      ...t,
+      ownerId: currentUserId,
+      ownerName: currentUser?.name || 'You',
+      counts: [{ userId: currentUserId, count: 1 }],
+    }))
+  }, [globalTerritories, territories, currentUserId, currentUser])
 
   if (error) return <p style={{ color: 'red', padding: 16 }}>{error}</p>
   if (!position) return (
@@ -410,7 +472,18 @@ export default function MapView() {
                 {canClose ? '🟢 Run back to orange dot to capture!' : `🔴 ${Math.round(needsMore)}m more to enable capture`}
               </div>
             )}
+
+            {/* Territory legend */}
+            <div style={{ marginTop: 8, padding: '6px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 7, fontSize: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <span>🟢 Yours</span>
+              <span>🟡 Contested</span>
+              <span>🔵 Clan</span>
+              <span>🔴 Enemy</span>
+            </div>
+
             {saveMessage && <div style={{ marginTop: 6, fontSize: 11, textAlign: 'center', color: saveMessage.includes('✓') ? '#4ade80' : '#f87171' }}>{saveMessage}</div>}
+            {syncStatus && <div style={{ marginTop: 4, fontSize: 11, textAlign: 'center', color: syncStatus.includes('✓') ? '#60a5fa' : '#94a3b8' }}>{syncStatus}</div>}
+
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {!isRunning
                 ? <button onClick={handleStart} style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer', letterSpacing: '0.04em' }}>▶ START RUN</button>
@@ -431,23 +504,9 @@ export default function MapView() {
 
       {/* ── TOP RIGHT: SPLITS + THEME TOGGLE ── */}
       <div style={{ position: 'absolute', zIndex: 1000, top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-        <button
-          onClick={() => setIsDarkMap(v => !v)}
-          style={{
-            background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
-            padding: '8px 14px', cursor: 'pointer',
-            fontFamily: '"JetBrains Mono","Fira Code",monospace',
-            fontSize: 13, color: '#f1f5f9',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-            display: 'flex', alignItems: 'center', gap: 6,
-            transition: 'background 0.2s', userSelect: 'none',
-          }}
-        >
+        <button onClick={() => setIsDarkMap(v => !v)} style={{ background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontFamily: '"JetBrains Mono","Fira Code",monospace', fontSize: 13, color: '#f1f5f9', boxShadow: '0 4px 16px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 6, transition: 'background 0.2s', userSelect: 'none' }}>
           {isDarkMap ? '☀️' : '🌙'}
-          <span style={{ fontSize: 11, opacity: 0.7, letterSpacing: '0.05em' }}>
-            {isDarkMap ? 'LIGHT' : 'DARK'}
-          </span>
+          <span style={{ fontSize: 11, opacity: 0.7, letterSpacing: '0.05em' }}>{isDarkMap ? 'LIGHT' : 'DARK'}</span>
         </button>
 
         {displaySplits.length > 0 && (
@@ -493,10 +552,68 @@ export default function MapView() {
           <RecenterMap position={position} isRunning={isRunning} />
           <Marker position={position} icon={blueDotIcon} />
 
-          {territories.map(t => (
-            <Polygon key={t.id} positions={t.points}
-              pathOptions={{ color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.3 }} />
-          ))}
+          {/* ── ALL TERRITORIES (global + local pending) ── */}
+          {territoriesForMap.map((t, i) => {
+            const { color, fill } = getTerritoryColor(t, currentUserId, currentUserClanId)
+            const myCount = t.counts?.find(c => c.userId === currentUserId)?.count || 0
+            const ownerCount = t.counts?.[0]?.count || 0
+            const needToRun = ownerCount - myCount + 1
+
+            return (
+              <Polygon
+                key={t._id || t.id || i}
+                positions={t.points || t.representativePolygon || []}
+                pathOptions={{ color, weight: 2, fillColor: fill, fillOpacity: 0.3 }}
+              >
+                <Popup>
+                  <div style={{ fontFamily: 'monospace', fontSize: 13, minWidth: 160 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                      👑 {t.ownerName || 'Unclaimed'}
+                      {t.ownerId === currentUserId && ' (You)'}
+                    </div>
+                    <div style={{ opacity: 0.7, marginBottom: 4 }}>
+                      Owner runs: {ownerCount}
+                    </div>
+                    {currentUserId && t.ownerId !== currentUserId && (
+                      <div style={{ color: '#ef4444', fontWeight: 600 }}>
+                        Your runs: {myCount}<br />
+                        Need {needToRun} more to claim
+                      </div>
+                    )}
+                    {t.ownerId === currentUserId && (
+                      <div style={{ color: '#22c55e', fontWeight: 600 }}>✓ You own this zone</div>
+                    )}
+                    {t.status === 'pending' && (
+                      <div style={{ color: '#f59e0b', fontSize: 11, marginTop: 4 }}>⏳ Pending sync</div>
+                    )}
+                    <div style={{ opacity: 0.5, fontSize: 11, marginTop: 4 }}>
+                      Area: {formatArea(t.area || 0)}
+                    </div>
+                  </div>
+                </Popup>
+              </Polygon>
+            )
+          })}
+
+          {/* Local pending territories not yet in globalTerritories — show in green */}
+          {territories
+            .filter(t => t.status === 'pending' && !globalTerritories.find(g => g._id === t.zoneId))
+            .map((t, i) => (
+              <Polygon
+                key={`pending-${t.id}`}
+                positions={t.points}
+                pathOptions={{ color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.3, dashArray: '6 4' }}
+              >
+                <Popup>
+                  <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                    <div style={{ fontWeight: 700 }}>⏳ Pending sync</div>
+                    <div style={{ opacity: 0.7 }}>Will be submitted when synced</div>
+                    <div style={{ opacity: 0.5, fontSize: 11 }}>Area: {formatArea(t.area)}</div>
+                  </div>
+                </Popup>
+              </Polygon>
+            ))
+          }
 
           {displayPath.length > 1 && <Polyline positions={displayPath} color="#ef4444" weight={3} />}
 
