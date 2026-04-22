@@ -1,6 +1,6 @@
 // territoriesAPI.js — handles all territory sync logic
 
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 /**
  * Fetch all territories from backend for map overlay
@@ -11,7 +11,8 @@ export async function fetchAllTerritories() {
     const res = await fetch(`${API_BASE}/territories/map`)
     if (!res.ok) return []
     const data = await res.json()
-    return data.territories || []
+    // Backend returns array directly (or { territories: [...] })
+    return Array.isArray(data) ? data : (data.territories || [])
   } catch {
     return []
   }
