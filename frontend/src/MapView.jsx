@@ -4,7 +4,7 @@ import {
   MapContainer, TileLayer, Marker, Popup,
   Polyline, Polygon, useMap,
 } from 'react-leaflet'
-import { fetchAllTerritories, syncPendingTerritories } from './territoriesAPI'
+import { fetchAllTerritories, fetchClanTerritories, syncPendingTerritories } from './territoriesAPI'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -128,6 +128,7 @@ export default function MapView() {
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
   const [isDarkMap, setIsDarkMap] = useState(true)
   const [syncStatus, setSyncStatus] = useState('')  // shows sync result
+  const [isClanMode, setIsClanMode] = useState(false)  // clan compete mode
 
   // Current user info
   const currentUser = useMemo(() => {
@@ -183,6 +184,15 @@ export default function MapView() {
     // Fetch all territories from backend for map overlay
     fetchAllTerritories().then(setGlobalTerritories)
   }, [])
+
+  // Refetch territories when clan mode changes
+  useEffect(() => {
+    if (isClanMode && currentUserClanId) {
+      fetchClanTerritories(currentUserClanId).then(setGlobalTerritories)
+    } else if (!isClanMode) {
+      fetchAllTerritories().then(setGlobalTerritories)
+    }
+  }, [isClanMode, currentUserClanId])
 
   // Persist theme
   useEffect(() => {
@@ -527,6 +537,13 @@ export default function MapView() {
           {isDarkMap ? '☀️' : '🌙'}
           <span style={{ fontSize: 11, opacity: 0.7, letterSpacing: '0.05em' }}>{isDarkMap ? 'LIGHT' : 'DARK'}</span>
         </button>
+
+        {currentUserClanId && (
+          <button onClick={() => setIsClanMode(v => !v)} style={{ background: isClanMode ? 'rgba(59,130,246,0.9)' : 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)', border: isClanMode ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', fontFamily: '"JetBrains Mono","Fira Code",monospace', fontSize: 13, color: '#f1f5f9', boxShadow: isClanMode ? '0 4px 16px rgba(59,130,246,0.4)' : '0 4px 16px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.3s', userSelect: 'none' }}>
+            {isClanMode ? '🏰' : '⚔️'}
+            <span style={{ fontSize: 11, opacity: 0.9, letterSpacing: '0.05em' }}>{isClanMode ? 'CLAN' : 'GLOBAL'}</span>
+          </button>
+        )}
 
         {displaySplits.length > 0 && (
           <div style={{ background: 'rgba(10,15,28,0.88)', backdropFilter: 'blur(12px)', color: '#f1f5f9', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', fontFamily: '"JetBrains Mono","Fira Code",monospace', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '12px 14px', width: 160 }}>
