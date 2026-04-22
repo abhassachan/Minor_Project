@@ -150,16 +150,22 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // @route   GET /api/territories/clan/:clanId
-// @desc    Get all zones owned by members of a specific clan
+// @desc    Get all zones where clan members have run counts (for clan compete mode)
 // @access  Public
 router.get('/clan/:clanId', async (req, res) => {
     try {
-        // First find all users in that clan
+        // Find all users in that clan
         const members = await User.find({ clanId: req.params.clanId }).select('_id');
         const memberIds = members.map(m => m._id);
         
-        // Find territories owned by any of those users
-        const zones = await Territory.find({ owner: { $in: memberIds } });
+        // Find territories where any clan member has a run count OR owns it
+        const zones = await Territory.find({
+            $or: [
+                { owner: { $in: memberIds } },
+                { 'counts.user': { $in: memberIds } }
+            ]
+        }).populate('owner', 'name profilePic clanId');
+
         res.json(zones);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });

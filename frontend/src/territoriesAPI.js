@@ -38,6 +38,22 @@ export async function fetchAllTerritories() {
 }
 
 /**
+ * Fetch territories for a specific clan (clan compete mode)
+ */
+export async function fetchClanTerritories(clanId) {
+  if (!clanId) return []
+  try {
+    const res = await fetch(`${API_BASE}/territories/clan/${clanId}`)
+    if (!res.ok) return []
+    const data = await res.json()
+    const zones = Array.isArray(data) ? data : []
+    return zones.map(normalizeZone)
+  } catch {
+    return []
+  }
+}
+
+/**
  * Sync all pending local territories to backend
  * Called when run stops and user is logged in
  */
