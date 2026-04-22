@@ -352,6 +352,7 @@ export default function MapView() {
     if (token) {
       // Save run to backend
       try {
+        console.log('[Run Save] POSTing to:', `${API_BASE}/runs`)
         const res = await fetch(`${API_BASE}/runs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -360,9 +361,17 @@ export default function MapView() {
             pace, route: path, territoriesCaptured: territories.filter(t => t.status === 'pending').length,
           }),
         })
-        setSaveMessage(res.ok ? 'Run saved to cloud ✓' : 'Run saved locally (cloud sync failed)')
-      } catch {
-        setSaveMessage('Run saved locally (offline)')
+        if (res.ok) {
+          console.log('[Run Save] ✅ Success')
+          setSaveMessage('Run saved to cloud ✓')
+        } else {
+          const errBody = await res.text()
+          console.error('[Run Save] ❌ Failed:', res.status, errBody)
+          setSaveMessage(`Cloud save failed: ${res.status}`)
+        }
+      } catch (err) {
+        console.error('[Run Save] ❌ Network error:', err.message)
+        setSaveMessage(`Run saved locally (offline: ${err.message})`)
       }
 
       // Sync all pending territories to backend
