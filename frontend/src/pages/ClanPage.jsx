@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Users, Plus, KeyRound, Shield, Trophy, Activity, Map, Link2, Copy, Check, LogOut, UserPlus } from 'lucide-react';
+import ClanChat from '../components/ClanChat';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -361,6 +362,9 @@ export default function ClanPage() {
                     {leaving ? 'LEAVING...' : 'LEAVE CLAN'}
                 </button>
             </div>
+
+            {/* Clan Chat FAB */}
+            <ClanChat clanId={clanData?._id} currentUserId={user?._id || user?.id} />
         </div>
     );
 }
