@@ -17,7 +17,7 @@ router.post('/', auth, async (req, res) => {
         const { name } = req.body;
         if (!name) return res.status(400).json({ error: 'Clan name is required' });
 
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.userId);
         if (user.clanId) {
             return res.status(400).json({ error: 'You are already in a clan' });
         }
@@ -34,8 +34,8 @@ router.post('/', auth, async (req, res) => {
         const newClan = new Clan({
             name,
             code,
-            creator: req.user.id,
-            members: [req.user.id] // Creator is the first member
+            creator: req.userId,
+            members: [req.userId] // Creator is the first member
         });
 
         await newClan.save();
@@ -46,6 +46,7 @@ router.post('/', auth, async (req, res) => {
 
         res.status(201).json({ message: 'Clan created successfully', clan: newClan });
     } catch (err) {
+        console.error('Clan create error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -58,7 +59,7 @@ router.post('/join', auth, async (req, res) => {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: 'Clan code is required' });
 
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.userId);
         if (user.clanId) {
             return res.status(400).json({ error: 'You are already in a clan. Leave it first.' });
         }
@@ -69,7 +70,7 @@ router.post('/join', auth, async (req, res) => {
         }
 
         // Add user to clan members
-        clan.members.push(req.user.id);
+        clan.members.push(req.userId);
         await clan.save();
 
         // Update user
@@ -78,6 +79,74 @@ router.post('/join', auth, async (req, res) => {
 
         res.json({ message: `Successfully joined ${clan.name}`, clan });
     } catch (err) {
+        console.error('Clan join error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// @route   GET /api/clans/code/:code
+// @desc    Get clan info by invite code (for invite link previews)
+// @access  Public
+router.get('/code/:code', async (req, res) => {
+    try {
+        const clan = await Clan.findOne({ code: req.params.code.toUpperCase() })
+            .populate('creator', 'name profilePic')
+            .populate('members', 'name profilePic');
+
+        if (!clan) return res.status(404).json({ error: 'Clan not found' });
+
+        res.json({
+            _id: clan._id,
+            name: clan.name,
+            code: clan.code,
+            creator: clan.creator,
+            memberCount: clan.members.length,
+            members: clan.members.slice(0, 5), // Preview first 5 members
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// @route   POST /api/clans/leave
+// @desc    Leave current clan
+// @access  Private
+router.post('/leave', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user.clanId) {
+            return res.status(400).json({ error: 'You are not in a clan' });
+        }
+
+        const clan = await Clan.findById(user.clanId);
+        if (!clan) {
+            // Clan was deleted, just clear user's clanId
+            user.clanId = null;
+            await user.save();
+            return res.json({ message: 'Left clan' });
+        }
+
+        // Remove user from members
+        clan.members = clan.members.filter(m => m.toString() !== req.userId);
+
+        // If creator is leaving and there are other members, transfer ownership
+        if (clan.creator.toString() === req.userId && clan.members.length > 0) {
+            clan.creator = clan.members[0];
+        }
+
+        // If no members left, delete the clan
+        if (clan.members.length === 0) {
+            await Clan.findByIdAndDelete(clan._id);
+        } else {
+            await clan.save();
+        }
+
+        user.clanId = null;
+        await user.save();
+
+        res.json({ message: 'Successfully left the clan' });
+    } catch (err) {
+        console.error('Clan leave error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
