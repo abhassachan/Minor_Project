@@ -6,6 +6,8 @@ import {
 } from 'react-leaflet'
 import { fetchAllTerritories, syncPendingTerritories } from './territoriesAPI'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 // Blue pulsing location dot icon
 const blueDotIcon = L.divIcon({
   className: '',
@@ -350,7 +352,7 @@ export default function MapView() {
     if (token) {
       // Save run to backend
       try {
-        const res = await fetch(`http://${window.location.hostname}:5000/api/runs`, {
+        const res = await fetch(`${API_BASE}/runs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
