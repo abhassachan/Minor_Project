@@ -60,12 +60,12 @@ router.post('/record', auth, async (req, res) => {
 
         if (matchedZone) {
             // Contest existing zone
-            const userIndex = matchedZone.counts.findIndex(c => c.user._id && c.user._id.toString() === req.user.id);
+            const userIndex = matchedZone.counts.findIndex(c => c.user._id && c.user._id.toString() === req.userId);
             if (userIndex !== -1) {
                 matchedZone.counts[userIndex].count += 1;
                 matchedZone.counts[userIndex].lastRunAt = Date.now();
             } else {
-                matchedZone.counts.push({ user: req.user.id, count: 1 });
+                matchedZone.counts.push({ user: req.userId, count: 1 });
             }
 
             // Recalculate owner (who has the max count?)
@@ -91,14 +91,14 @@ router.post('/record', auth, async (req, res) => {
                 centroid,
                 points: polygon,
                 area: area,
-                counts: [{ user: req.user.id, count: 1 }],
-                owner: req.user.id
+                counts: [{ user: req.userId, count: 1 }],
+                owner: req.userId
             });
             
             await newZone.save();
             
             // Increment user's total area since they own a new territory
-            await User.findByIdAndUpdate(req.user.id, { $inc: { totalArea: area } });
+            await User.findByIdAndUpdate(req.userId, { $inc: { totalArea: area } });
 
             res.status(201).json({ message: 'Created new territory', zone: newZone, isNew: true });
         }
