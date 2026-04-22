@@ -23,7 +23,7 @@ export async function fetchAllTerritories() {
  * Called when run stops and user is logged in
  */
 export async function syncPendingTerritories(token) {
-  if (!token) return { synced: 0, failed: 0 }
+  if (!token) return { synced: 0, failed: 0, error: 'No token' }
 
   const stored = JSON.parse(localStorage.getItem('territories') || '[]')
   const pending = stored.filter(t => t.status === 'pending')
@@ -32,11 +32,15 @@ export async function syncPendingTerritories(token) {
 
   let synced = 0
   let failed = 0
+  let lastError = ''
 
   const updated = [...stored]
 
   for (const territory of pending) {
     try {
+      console.log('[Territory Sync] POSTing to:', `${API_BASE}/territories/record`)
+      console.log('[Territory Sync] Payload:', { polygon: territory.points?.length + ' points', area: territory.area })
+
       const res = await fetch(`${API_BASE}/territories/record`, {
         method: 'POST',
         headers: {
@@ -51,6 +55,7 @@ export async function syncPendingTerritories(token) {
 
       if (res.ok) {
         const data = await res.json()
+        console.log('[Territory Sync] ✅ Success:', data.message)
         // Mark as synced and store the backend zoneId
         const idx = updated.findIndex(t => t.id === territory.id)
         if (idx !== -1) {
@@ -64,13 +69,18 @@ export async function syncPendingTerritories(token) {
         }
         synced++
       } else {
+        const errBody = await res.text()
+        lastError = `${res.status}: ${errBody}`
+        console.error('[Territory Sync] ❌ Failed:', res.status, errBody)
         failed++
       }
-    } catch {
+    } catch (err) {
+      lastError = err.message
+      console.error('[Territory Sync] ❌ Network error:', err.message)
       failed++
     }
   }
 
   localStorage.setItem('territories', JSON.stringify(updated))
-  return { synced, failed }
+  return { synced, failed, lastError }
 }

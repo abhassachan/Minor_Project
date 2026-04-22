@@ -366,24 +366,29 @@ export default function MapView() {
       }
 
       // Sync all pending territories to backend
-      const pendingCount = territories.filter(t => t.status === 'pending').length
-      if (pendingCount > 0) {
-        setSyncStatus(`Syncing ${pendingCount} territories…`)
-        const { synced, failed } = await syncPendingTerritories(token)
-        if (failed === 0) {
-          setSyncStatus(`${synced} territor${synced === 1 ? 'y' : 'ies'} synced ✓`)
-        } else {
-          setSyncStatus(`${synced} synced, ${failed} failed`)
-        }
-        // Refresh global territories after sync
-        fetchAllTerritories().then(setGlobalTerritories)
-        // Reload local territories from localStorage (now marked synced)
-        const refreshed = localStorage.getItem('territories')
-        if (refreshed) setTerritories(JSON.parse(refreshed))
-      }
+      await retrySyncTerritories(token)
     } else {
       setSaveMessage('Run saved ✓ (log in to sync territories)')
     }
+  }
+
+  const retrySyncTerritories = async (tokenOverride) => {
+    const token = tokenOverride || localStorage.getItem('token')
+    if (!token) { setSyncStatus('Not logged in — cannot sync'); return }
+    const pendingCount = territories.filter(t => t.status === 'pending').length
+    if (pendingCount === 0) { setSyncStatus('No pending territories'); return }
+    setSyncStatus(`Syncing ${pendingCount} territories…`)
+    const { synced, failed, lastError } = await syncPendingTerritories(token)
+    if (failed === 0) {
+      setSyncStatus(`${synced} territor${synced === 1 ? 'y' : 'ies'} synced ✓`)
+    } else {
+      setSyncStatus(`${synced} synced, ${failed} failed — ${lastError || 'unknown error'}`)
+    }
+    // Refresh global territories after sync
+    fetchAllTerritories().then(setGlobalTerritories)
+    // Reload local territories from localStorage (now marked synced)
+    const refreshed = localStorage.getItem('territories')
+    if (refreshed) setTerritories(JSON.parse(refreshed))
   }
 
   const distanceKm = distance / 1000
@@ -484,7 +489,10 @@ export default function MapView() {
             </div>
 
             {saveMessage && <div style={{ marginTop: 6, fontSize: 11, textAlign: 'center', color: saveMessage.includes('✓') ? '#4ade80' : '#f87171' }}>{saveMessage}</div>}
-            {syncStatus && <div style={{ marginTop: 4, fontSize: 11, textAlign: 'center', color: syncStatus.includes('✓') ? '#60a5fa' : '#94a3b8' }}>{syncStatus}</div>}
+            {syncStatus && <div style={{ marginTop: 4, fontSize: 11, textAlign: 'center', color: syncStatus.includes('✓') ? '#60a5fa' : syncStatus.includes('failed') ? '#f87171' : '#94a3b8' }}>{syncStatus}</div>}
+            {!isRunning && territories.some(t => t.status === 'pending') && (
+              <button onClick={() => retrySyncTerritories()} style={{ marginTop: 6, background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: 12, cursor: 'pointer', letterSpacing: '0.04em' }}>🔄 RETRY SYNC ({territories.filter(t => t.status === 'pending').length})</button>
+            )}
 
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {!isRunning
