@@ -3,6 +3,25 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 /**
+ * Normalize a backend zone into the shape the frontend expects:
+ *   ownerId, ownerName, ownerClanId, counts[].userId
+ */
+function normalizeZone(zone) {
+  const owner = zone.owner || {}
+  return {
+    ...zone,
+    ownerId: owner._id || owner || null,
+    ownerName: owner.name || null,
+    ownerClanId: owner.clanId || null,
+    counts: (zone.counts || []).map(c => ({
+      userId: c.user?._id || c.user,   // handle both populated & raw ObjectId
+      count: c.count,
+      lastRunAt: c.lastRunAt,
+    })),
+  }
+}
+
+/**
  * Fetch all territories from backend for map overlay
  * Returns array of zones with owner info
  */
@@ -11,8 +30,8 @@ export async function fetchAllTerritories() {
     const res = await fetch(`${API_BASE}/territories/map`)
     if (!res.ok) return []
     const data = await res.json()
-    // Backend returns array directly (or { territories: [...] })
-    return Array.isArray(data) ? data : (data.territories || [])
+    const zones = Array.isArray(data) ? data : (data.territories || [])
+    return zones.map(normalizeZone)
   } catch {
     return []
   }
