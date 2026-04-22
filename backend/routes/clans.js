@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Clan = require('../models/Clan');
 const User = require('../models/User');
+const Message = require('../models/Message');
 const auth = require('../middleware/auth');
 
 // Helper to generate a random 6-character code
@@ -76,6 +77,15 @@ router.post('/join', auth, async (req, res) => {
         // Update user
         user.clanId = clan._id;
         await user.save();
+
+        // Post system message to chat
+        const joiner = await User.findById(req.userId).select('name');
+        await Message.create({
+            clan: clan._id,
+            sender: req.userId,
+            text: `${joiner.name} joined the clan!`,
+            type: 'system',
+        });
 
         res.json({ message: `Successfully joined ${clan.name}`, clan });
     } catch (err) {
@@ -192,6 +202,73 @@ router.get('/:clanId/leaderboard', async (req, res) => {
 
         res.json(rankedMembers);
     } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ── CHAT ENDPOINTS ────────────────────────────────────
+
+// @route   GET /api/clans/:clanId/messages
+// @desc    Get recent chat messages for a clan
+// @access  Private
+router.get('/:clanId/messages', auth, async (req, res) => {
+    try {
+        const clan = await Clan.findById(req.params.clanId);
+        if (!clan) return res.status(404).json({ error: 'Clan not found' });
+
+        // Check if user is a member
+        const isMember = clan.members.some(m => m.toString() === req.userId);
+        if (!isMember) return res.status(403).json({ error: 'Not a member of this clan' });
+
+        // Pagination: ?before=<messageId> for older messages
+        const limit = parseInt(req.query.limit) || 50;
+        const query = { clan: req.params.clanId };
+
+        // If 'after' param is provided, only get messages newer than that ID
+        if (req.query.after) {
+            query._id = { $gt: req.query.after };
+        }
+
+        const messages = await Message.find(query)
+            .populate('sender', 'name profilePic')
+            .sort({ createdAt: 1 })  // oldest first (for chat display)
+            .limit(limit);
+
+        res.json({ messages });
+    } catch (err) {
+        console.error('Fetch messages error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// @route   POST /api/clans/:clanId/messages
+// @desc    Send a message to clan chat
+// @access  Private
+router.post('/:clanId/messages', auth, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text || !text.trim()) return res.status(400).json({ error: 'Message text is required' });
+
+        const clan = await Clan.findById(req.params.clanId);
+        if (!clan) return res.status(404).json({ error: 'Clan not found' });
+
+        // Check if user is a member
+        const isMember = clan.members.some(m => m.toString() === req.userId);
+        if (!isMember) return res.status(403).json({ error: 'Not a member of this clan' });
+
+        const message = await Message.create({
+            clan: req.params.clanId,
+            sender: req.userId,
+            text: text.trim(),
+            type: 'text',
+        });
+
+        // Populate sender for response
+        await message.populate('sender', 'name profilePic');
+
+        res.status(201).json({ message });
+    } catch (err) {
+        console.error('Send message error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
