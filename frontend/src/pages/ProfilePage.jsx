@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
-import { User, Activity, Map, Trophy, Settings, Medal, LogOut, Hexagon } from 'lucide-react';
+import { User, Activity, Map, Trophy, Settings, Medal, LogOut, Hexagon, X, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
     const [user, setUser] = useState({});
+    const [showSettings, setShowSettings] = useState(false);
+    const [editName, setEditName] = useState('');
+    const [editUsername, setEditUsername] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
     const navigate = useNavigate();
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -14,7 +19,41 @@ export default function ProfilePage() {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        navigate('/');
+        navigate('/auth');
+    };
+
+    const handleOpenSettings = () => {
+        setEditName(user.name || '');
+        setEditUsername(user.username || '');
+        setShowSettings(true);
+    };
+
+    const handleSaveSettings = async () => {
+        setIsSaving(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE}/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': token
+                },
+                body: JSON.stringify({ name: editName, username: editUsername })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                setUser(data.user);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                setShowSettings(false);
+            } else {
+                alert(data.error || 'Failed to update profile');
+            }
+        } catch (err) {
+            console.error('Error saving profile:', err);
+            alert('Something went wrong.');
+        }
+        setIsSaving(false);
     };
 
     const initials = (user.name || 'Runner').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
@@ -27,7 +66,10 @@ export default function ProfilePage() {
                 
                 <div className="flex justify-between items-start mb-6 relative z-10">
                     <h1 className="text-3xl font-heading font-black">Profile</h1>
-                    <button className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition backdrop-blur-sm">
+                    <button 
+                        onClick={handleOpenSettings}
+                        className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition backdrop-blur-sm"
+                    >
                         <Settings size={20} />
                     </button>
                 </div>
@@ -125,6 +167,52 @@ export default function ProfilePage() {
                 </div>
 
             </div>
+
+            {/* Settings Modal Overlay */}
+            {showSettings && (
+                <div className="fixed inset-0 bg-brand-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-5 border-b border-brand-border flex justify-between items-center bg-brand-surface">
+                            <h3 className="font-heading font-bold text-lg text-brand-ink">Edit Profile</h3>
+                            <button onClick={() => setShowSettings(false)} className="text-brand-muted hover:text-brand-ink transition p-1 bg-white rounded-full shadow-sm border border-brand-border">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-brand-muted uppercase tracking-wider mb-1">Display Name</label>
+                                <input 
+                                    type="text" 
+                                    value={editName} 
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full bg-brand-surface2 border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-brand-muted uppercase tracking-wider mb-1">Username</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">@</span>
+                                    <input 
+                                        type="text" 
+                                        value={editUsername} 
+                                        onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                        className="w-full bg-brand-surface2 border border-brand-border rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-5 bg-brand-surface border-t border-brand-border">
+                            <button 
+                                onClick={handleSaveSettings}
+                                disabled={isSaving || !editName.trim() || !editUsername.trim()}
+                                className="w-full bg-brand-teal hover:bg-brand-teal-light text-white font-bold py-3 rounded-xl shadow-md shadow-brand-teal/20 transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSaving ? 'Saving...' : <><Save size={18} /> Save Changes</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
