@@ -12,6 +12,9 @@ export default function DashboardPage() {
     const [profile, setProfile] = useState(null);
     const [filter, setFilter] = useState('all');
     const [expandedRun, setExpandedRun] = useState(null);
+    const [rivals, setRivals] = useState([]);
+    const [leagueData, setLeagueData] = useState(null);
+    const [dynamicChallenges, setDynamicChallenges] = useState([]);
 
     // Load user from localStorage
     useEffect(() => {
@@ -43,10 +46,28 @@ export default function DashboardPage() {
             .then(data => { if (data.current !== undefined) setStreak(data); })
             .catch(() => { });
 
-        // Fetch profile (for league info)
+        // Fetch profile (for achievements, league info)
         fetch(`${API_BASE}/profile`, { headers })
             .then(r => r.json())
             .then(data => { if (data.user) setProfile(data.user); })
+            .catch(() => { });
+
+        // Fetch League Leaderboard (for Rivals)
+        fetch(`${API_BASE}/leaderboard`, { headers })
+            .then(r => r.json())
+            .then(data => { 
+                if (data.rankings) {
+                    setLeagueData(data);
+                    // Show up to 4 closest or top rivals
+                    setRivals(data.rankings.slice(0, 4));
+                }
+            })
+            .catch(() => { });
+
+        // Fetch Dynamic Active Challenges
+        fetch(`${API_BASE}/challenges/active`, { headers })
+            .then(r => r.json())
+            .then(data => { if (data.challenges) setDynamicChallenges(data.challenges); })
             .catch(() => { });
     }, [navigate]);
 
@@ -78,17 +99,30 @@ export default function DashboardPage() {
         navigate('/auth');
     };
 
-    const challenges = [
-        { title: '5K Conqueror', desc: 'Run 5km in a single session', progress: Math.min(100, Math.round(((stats?.totalDistance || 0) / 5) * 100)), xp: 500, type: 'challenge' },
-        { title: 'Run Streak', desc: 'Keep a 7-day run streak', progress: Math.min(100, Math.round((streak.current / 7) * 100)), xp: 300, type: 'challenge' },
-        { title: 'Zone Master', desc: 'Capture 10 different territories', progress: Math.min(100, Math.round(((stats?.totalTerritories || 0) / 10) * 100)), xp: 750, type: 'challenge' },
-    ];
+    // Make challenges dynamic based on backend
+    const maxRunDistance = runs.length > 0 ? Math.max(...runs.map(r => r.distance)) : 0;
 
-    const rivals = [
-        { name: 'NightStride', xp: '8.2k XP', zones: 12, trend: '+3' },
-        { name: 'UrbanWolf', xp: '7.9k XP', zones: 10, trend: '+1' },
-        { name: 'SprintGhost', xp: '6.4k XP', zones: 8, trend: '-2' },
-    ];
+    const challenges = dynamicChallenges.map(ch => {
+        let currentProgress = 0;
+        switch (ch.metric) {
+            case 'total_distance': currentProgress = stats?.totalDistance || 0; break;
+            case 'single_run_distance': currentProgress = maxRunDistance; break;
+            case 'streak': currentProgress = streak.current; break;
+            case 'territories': currentProgress = stats?.totalTerritories || 0; break;
+        }
+
+        const isCompleted = profile?.completedChallenges?.includes(ch._id);
+        const progressPercent = isCompleted ? 100 : Math.min(100, Math.round((currentProgress / ch.targetValue) * 100));
+
+        return {
+            title: ch.title,
+            desc: ch.description,
+            progress: progressPercent,
+            xp: ch.xpReward,
+            type: 'challenge',
+            isCompleted
+        };
+    });
 
     return (
         <div className="min-h-screen bg-brand-offwhite font-body text-brand-ink">
@@ -277,7 +311,10 @@ export default function DashboardPage() {
                             {challenges.filter(c => filter === 'all' || filter === 'challenge').map((ch, i) => (
                                 <div key={i} className="bg-brand-surface2 rounded-xl p-3">
                                     <div className="flex justify-between items-start mb-2">
-                                        <h4 className="text-[13px] font-semibold">{ch.title}</h4>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-[13px] font-semibold">{ch.title}</h4>
+                                            {ch.isCompleted && <span className="text-[9px] bg-brand-teal text-white px-1.5 py-0.5 rounded-full font-bold">DONE</span>}
+                                        </div>
                                         <span className="text-[10px] text-brand-teal font-mono">+{ch.xp} XP</span>
                                     </div>
                                     <p className="text-[11px] text-brand-muted mb-2">{ch.desc}</p>
@@ -293,24 +330,27 @@ export default function DashboardPage() {
                     {/* Rivals */}
                     <div className="card-base shadow-card p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-heading text-lg">Regional Rivals</h3>
-                            <span className="text-[10px] bg-brand-orange/10 text-brand-orange px-2 py-0.5 rounded-full font-bold">YOUR ZONE</span>
+                            <h3 className="font-heading text-lg">League Rivals</h3>
+                            <span className="text-[10px] bg-brand-orange/10 text-brand-orange px-2 py-0.5 rounded-full font-bold">{league.toUpperCase()} TIER</span>
                         </div>
                         <div className="space-y-3">
-                            {rivals.map((r, i) => (
-                                <div key={i} className="flex items-center gap-3 bg-brand-surface2 rounded-xl p-3">
-                                    <div className="w-9 h-9 rounded-full orange-gradient flex items-center justify-center text-white font-bold text-sm">
-                                        #{i + 1}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between">
-                                            <span className="text-[13px] font-semibold">{r.name}</span>
-                                            <span className={`text-[11px] font-mono ${r.trend.startsWith('+') ? 'text-brand-teal' : 'text-brand-danger'}`}>{r.trend}</span>
+                            {rivals.length === 0 ? (
+                                <p className="text-[11px] text-brand-muted">No rivals found.</p>
+                            ) : (
+                                rivals.map((r, i) => (
+                                    <div key={r._id || i} className={`flex items-center gap-3 bg-brand-surface2 rounded-xl p-3 ${r.isYou ? 'border border-brand-teal bg-brand-teal/5' : ''}`}>
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm ${r.isYou ? 'bg-brand-teal' : 'orange-gradient'}`}>
+                                            #{r.rank}
                                         </div>
-                                        <p className="text-[11px] text-brand-muted">{r.xp} · {r.zones} zones</p>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[13px] font-semibold">{r.name} {r.isYou && '(You)'}</span>
+                                            </div>
+                                            <p className="text-[11px] text-brand-muted">{r.weeklyXP || 0} XP this week</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     </div>
 
@@ -332,6 +372,11 @@ export default function DashboardPage() {
                             <div>
                                 <span className="text-[13px] font-semibold">{league} League</span>
                                 <p className="text-[11px] text-brand-muted">Weekly XP: {profile?.weeklyXP || 0}</p>
+                                {leagueData && (
+                                    <p className="text-[11px] font-bold text-brand-teal mt-0.5">
+                                        Rank #{leagueData.rankings.find(r => r.isYou)?.rank || '?'} of {leagueData.totalPlayers || 0}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

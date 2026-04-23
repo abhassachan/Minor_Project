@@ -1,6 +1,7 @@
 const express = require('express');
 const Run = require('../models/Run');
 const User = require('../models/User');
+const Challenge = require('../models/Challenge');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -93,6 +94,34 @@ router.post('/', async (req, res) => {
                 }
             }
 
+            // Check dynamic global challenges
+            const activeChallenges = await Challenge.find({
+                isActive: true,
+                $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }]
+            });
+
+            const maxRunDistance = allRuns.length > 0 ? Math.max(...allRuns.map(r => r.distance)) : distance;
+            const completedDynamic = [];
+
+            for (const challenge of activeChallenges) {
+                // Skip if already completed
+                if (user.completedChallenges.includes(challenge._id)) continue;
+
+                let progress = 0;
+                switch (challenge.metric) {
+                    case 'total_distance': progress = user.totalDistance; break;
+                    case 'single_run_distance': progress = maxRunDistance; break;
+                    case 'streak': progress = user.streak.current; break;
+                    case 'territories': progress = user.totalLoops || 0; break; // totalLoops stores territories captured
+                }
+
+                if (progress >= challenge.targetValue) {
+                    user.completedChallenges.push(challenge._id);
+                    user.weeklyXP = (user.weeklyXP || 0) + challenge.xpReward;
+                    completedDynamic.push(challenge.title);
+                }
+            }
+
             await user.save();
 
             res.status(201).json({
@@ -100,6 +129,7 @@ router.post('/', async (req, res) => {
                 run,
                 streak: user.streak.current,
                 newAchievements,
+                completedChallenges: completedDynamic,
             });
         } else {
             res.status(201).json({ message: 'Run saved successfully', run });
