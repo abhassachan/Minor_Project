@@ -51,11 +51,17 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
-        // ── Achievements ──
+        // ── Achievements & Challenges ──
         achievements: {
             type: [String], // ["first_run", "5k_conqueror", "10_runs", ...]
             default: [],
         },
+        completedChallenges: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Challenge',
+            }
+        ],
         // ── Clan & Territories ──
         clanId: {
             type: mongoose.Schema.Types.ObjectId,
