@@ -1,4 +1,4 @@
-const CACHE_NAME = 'run-tracker-v1'
+const CACHE_NAME = 'run-tracker-v2'
 
 // App shell files to cache on install
 const PRECACHE_URLS = [
