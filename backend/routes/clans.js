@@ -273,4 +273,34 @@ router.post('/:clanId/messages', auth, async (req, res) => {
     }
 });
 
+// @route   POST /api/clans/:clanId/messages/read
+// @desc    Mark unread messages in the clan as read
+// @access  Private
+router.post('/:clanId/messages/read', auth, async (req, res) => {
+    try {
+        const clan = await Clan.findById(req.params.clanId);
+        if (!clan) return res.status(404).json({ error: 'Clan not found' });
+
+        // Check if user is a member
+        const isMember = clan.members.some(m => m.toString() === req.userId);
+        if (!isMember) return res.status(403).json({ error: 'Not a member of this clan' });
+
+        // Update all messages in this clan where sender is NOT the current user
+        // and the current user hasn't read it yet.
+        await Message.updateMany(
+            { 
+                clan: req.params.clanId, 
+                sender: { $ne: req.userId },
+                readBy: { $ne: req.userId }
+            },
+            { $addToSet: { readBy: req.userId } }
+        );
+
+        res.json({ message: 'Messages marked as read' });
+    } catch (err) {
+        console.error('Mark read error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 module.exports = router;

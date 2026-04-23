@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle, X } from 'lucide-react';
+import { Send, MessageCircle, X, CheckCheck } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -13,21 +13,43 @@ export default function ClanChat({ clanId, currentUserId }) {
     const lastMsgIdRef = useRef(null);
     const token = localStorage.getItem('token');
 
+    const markAsRead = async () => {
+        if (!clanId || !token) return;
+        try {
+            await fetch(`${API_BASE}/clans/${clanId}/messages/read`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch { /* ignore */ }
+    };
+
     const fetchMessages = async (isPolling = false) => {
         if (!clanId || !token) return;
         try {
-            const url = lastMsgIdRef.current && isPolling
-                ? `${API_BASE}/clans/${clanId}/messages?after=${lastMsgIdRef.current}`
-                : `${API_BASE}/clans/${clanId}/messages?limit=50`;
+            // Always fetch latest 50 to get updated read receipts
+            const url = `${API_BASE}/clans/${clanId}/messages?limit=50`;
             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             if (!res.ok) return;
             const data = await res.json();
             const msgs = data.messages || [];
 
-            if (isPolling && lastMsgIdRef.current && msgs.length > 0) {
-                setMessages(prev => [...prev, ...msgs]);
-                if (!open) setUnread(u => u + msgs.length);
-            } else if (!isPolling) {
+            if (isPolling) {
+                setMessages(prev => {
+                    const newMsgs = [...prev];
+                    let unreadCount = 0;
+                    msgs.forEach(m => {
+                        const idx = newMsgs.findIndex(x => x._id === m._id);
+                        if (idx >= 0) {
+                            newMsgs[idx] = m; // update existing (for readBy)
+                        } else {
+                            newMsgs.push(m);
+                            unreadCount++;
+                        }
+                    });
+                    if (!open && unreadCount > 0) setUnread(u => u + unreadCount);
+                    return newMsgs.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                });
+            } else {
                 setMessages(msgs);
             }
 
@@ -42,7 +64,11 @@ export default function ClanChat({ clanId, currentUserId }) {
     }, [clanId]);
 
     useEffect(() => {
-        if (open) { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setUnread(0); }
+        if (open) { 
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+            setUnread(0);
+            markAsRead();
+        }
     }, [messages, open]);
 
     const handleSend = async () => {
@@ -162,9 +188,17 @@ export default function ClanChat({ clanId, currentUserId }) {
                             }}>
                                 {m.text}
                             </div>
-                            <span style={{ fontSize:9, color:'#94a3b8', marginTop:2, padding:'0 4px' }}>
-                                {formatTime(m.createdAt)}
-                            </span>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent: isMe ? 'flex-end' : 'flex-start', marginTop:2, padding:'0 4px', gap:4 }}>
+                                <span style={{ fontSize:9, color:'#94a3b8' }}>
+                                    {formatTime(m.createdAt)}
+                                </span>
+                                {isMe && (
+                                    <CheckCheck 
+                                        size={12} 
+                                        color={(m.readBy && m.readBy.length > 0) ? '#3b82f6' : '#cbd5e1'} 
+                                    />
+                                )}
+                            </div>
                         </div>
                     );
                 })}
