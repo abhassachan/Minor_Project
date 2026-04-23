@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Users, Plus, KeyRound, Shield, Trophy, Activity, Map, Link2, Copy, Check, LogOut, UserPlus } from 'lucide-react';
+import { Users, Plus, KeyRound, Shield, Trophy, Activity, Map, Link2, Copy, Check, LogOut, UserPlus, Swords } from 'lucide-react';
 import ClanChat from '../components/ClanChat';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -26,22 +26,45 @@ export default function ClanPage() {
             return;
         }
 
-        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        setUser(storedUser);
+        // Fetch fresh user data from backend to avoid stale localStorage
+        const initUser = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/profile`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error('Failed to fetch profile');
+                const data = await res.json();
+                const freshUser = data.user;
+                // Sync localStorage with fresh backend data
+                localStorage.setItem('user', JSON.stringify(freshUser));
+                setUser(freshUser);
 
-        // Check if there's an invite code in the URL
-        const inviteCode = searchParams.get('invite');
-        if (inviteCode) {
-            setJoinCode(inviteCode.toUpperCase());
-            // Fetch preview of the clan
-            fetchInvitePreview(inviteCode);
-        }
+                // Check if there's an invite code in the URL
+                const inviteCode = searchParams.get('invite');
+                if (inviteCode) {
+                    setJoinCode(inviteCode.toUpperCase());
+                    fetchInvitePreview(inviteCode);
+                }
 
-        if (storedUser.clanId) {
-            fetchClan(storedUser.clanId);
-        } else {
-            setLoading(false);
-        }
+                if (freshUser.clanId) {
+                    fetchClan(freshUser.clanId);
+                } else {
+                    setLoading(false);
+                }
+            } catch (err) {
+                console.error('Failed to load user profile:', err);
+                // Fallback to localStorage if profile fetch fails
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                setUser(storedUser);
+                if (storedUser.clanId) {
+                    fetchClan(storedUser.clanId);
+                } else {
+                    setLoading(false);
+                }
+            }
+        };
+
+        initUser();
     }, [navigate, searchParams]);
 
     const fetchClan = async (clanId) => {
@@ -308,6 +331,26 @@ export default function ClanPage() {
                         <UserPlus size={16} /> Share Invite Link
                     </button>
                 </div>
+
+                {/* ⚔️ Clan Wars Button */}
+                <button
+                    onClick={() => navigate('/clan-wars')}
+                    className="w-full bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white p-5 rounded-2xl shadow-lg hover:shadow-xl transition-all relative overflow-hidden group"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                                <Swords size={20} />
+                            </div>
+                            <div className="text-left">
+                                <div className="font-heading font-bold text-lg leading-tight">Clan Wars</div>
+                                <div className="text-white/80 text-[10px] uppercase tracking-wider font-bold">Battle rival clans</div>
+                            </div>
+                        </div>
+                        <div className="text-white/80 text-xl">→</div>
+                    </div>
+                </button>
 
                 {/* Aggregated Stats Row */}
                 <div className="grid grid-cols-2 gap-3">
