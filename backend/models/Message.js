@@ -24,6 +24,12 @@ const messageSchema = new mongoose.Schema(
             enum: ['text', 'system'], // system = "X joined the clan", etc.
             default: 'text',
         },
+        readBy: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }
+        ],
     },
     { timestamps: true }
 );
