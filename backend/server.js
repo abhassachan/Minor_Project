@@ -26,6 +26,7 @@ app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/streak', require('./routes/streak'));
 app.use('/api/territories', require('./routes/territories'));
 app.use('/api/clans', require('./routes/clans'));
+app.use('/api/clanwars', require('./routes/clanwars'));
 
 // ── Health check ─────────────────────────────────────
 app.get('/', (req, res) => {
