@@ -195,7 +195,7 @@ export default function ClanPage() {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-[#f8fafc] flex justify-center pt-20">
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-dark-bg flex justify-center pt-20 transition-colors duration-300">
             <div className="w-8 h-8 border-4 border-brand-teal/30 border-t-brand-teal rounded-full animate-spin"></div>
         </div>
     );
@@ -203,17 +203,17 @@ export default function ClanPage() {
     // ── STATE 1: USER HAS NO CLAN ──
     if (!user?.clanId) {
         return (
-            <div className="min-h-[100dvh] bg-[#f8fafc] font-body text-brand-ink p-6 pb-24">
+            <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-dark-bg font-body text-brand-ink dark:text-dark-text p-6 pb-24 transition-colors duration-300">
                 <div className="text-center pt-8 mb-10">
-                    <div className="w-20 h-20 bg-brand-surface2 rounded-full flex items-center justify-center mx-auto mb-4 border border-brand-border">
-                        <Users size={32} className="text-brand-muted" />
+                    <div className="w-20 h-20 bg-brand-surface2 dark:bg-dark-surface2 rounded-full flex items-center justify-center mx-auto mb-4 border border-brand-border dark:border-dark-border">
+                        <Users size={32} className="text-brand-muted dark:text-dark-muted" />
                     </div>
                     <h1 className="text-3xl font-heading font-bold">Join a Clan</h1>
-                    <p className="text-brand-muted text-sm mt-2">Team up to dominate territories together.</p>
+                    <p className="text-brand-muted dark:text-dark-muted text-sm mt-2">Team up to dominate territories together.</p>
                 </div>
 
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-6 font-bold text-center border border-red-200">{error}</div>}
-                {success && <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-6 font-bold text-center border border-green-200">{success}</div>}
+                {error && <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 font-bold text-center border border-red-200 dark:border-red-800">{error}</div>}
+                {success && <div className="bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 p-3 rounded-xl text-sm mb-6 font-bold text-center border border-green-200 dark:border-green-800">{success}</div>}
 
                 {/* Invite Preview Banner */}
                 {invitePreview && !user?.clanId && (
@@ -223,7 +223,7 @@ export default function ClanPage() {
                             <span className="text-xs font-bold text-brand-teal uppercase tracking-wider">You're Invited!</span>
                         </div>
                         <h3 className="font-heading text-xl font-bold mb-1">{invitePreview.name}</h3>
-                        <p className="text-sm text-brand-muted mb-3">
+                        <p className="text-sm text-brand-muted dark:text-dark-muted mb-3">
                             {invitePreview.memberCount} member{invitePreview.memberCount !== 1 ? 's' : ''} · Created by {invitePreview.creator?.name || 'Unknown'}
                         </p>
                         <button onClick={handleJoinClan} className="w-full bg-brand-teal text-white font-bold py-3.5 rounded-2xl shadow-[0_4px_15px_rgba(35,160,148,0.3)] hover:opacity-90 transition-opacity">
@@ -234,7 +234,7 @@ export default function ClanPage() {
 
                 <div className="space-y-6">
                     {/* Create Clan Card */}
-                    <div className="glass-card border-none bg-white shadow-md rounded-[2.5rem] p-6 relative overflow-hidden">
+                    <div className="bg-white dark:bg-dark-surface shadow-md dark:shadow-lg dark:shadow-black/30 rounded-[2.5rem] p-6 relative overflow-hidden border-none transition-colors duration-300">
                         <div className="absolute -right-6 -top-6 w-24 h-24 bg-brand-teal mt-0 ml-0 rounded-full blur-[40px] opacity-20"></div>
                         <h2 className="font-heading text-xl font-bold flex items-center gap-2 mb-4">
                             <Plus size={20} className="text-brand-teal" /> Create a Squad
@@ -242,7 +242,7 @@ export default function ClanPage() {
                         <input 
                             type="text" 
                             placeholder="Awesome Team Name" 
-                            className="w-full bg-[#f8fafc] p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-brand-teal transition-all mb-4"
+                            className="w-full bg-[#f8fafc] dark:bg-dark-surface2 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-brand-teal transition-all mb-4 text-brand-ink dark:text-dark-text placeholder-brand-muted dark:placeholder-dark-muted"
                             value={createName}
                             onChange={(e) => setCreateName(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleCreateClan()}
@@ -253,7 +253,7 @@ export default function ClanPage() {
                     </div>
 
                     {/* Join Clan Card */}
-                    <div className="glass-card border-none bg-white shadow-md rounded-[2.5rem] p-6 relative overflow-hidden">
+                    <div className="bg-white dark:bg-dark-surface shadow-md dark:shadow-lg dark:shadow-black/30 rounded-[2.5rem] p-6 relative overflow-hidden border-none transition-colors duration-300">
                         <div className="absolute -right-6 -top-6 w-24 h-24 bg-brand-orange mt-0 ml-0 rounded-full blur-[40px] opacity-20"></div>
                         <h2 className="font-heading text-xl font-bold flex items-center gap-2 mb-4">
                             <KeyRound size={20} className="text-brand-orange" /> Have an Invite?
@@ -261,13 +261,13 @@ export default function ClanPage() {
                         <input 
                             type="text" 
                             placeholder="Enter 6-digit Code (e.g. A3XZ9)" 
-                            className="w-full bg-[#f8fafc] p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-brand-orange transition-all mb-4 uppercase tracking-widest"
+                            className="w-full bg-[#f8fafc] dark:bg-dark-surface2 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-brand-orange transition-all mb-4 uppercase tracking-widest text-brand-ink dark:text-dark-text placeholder-brand-muted dark:placeholder-dark-muted"
                             value={joinCode}
                             maxLength={6}
                             onChange={(e) => setJoinCode(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleJoinClan()}
                         />
-                        <button onClick={handleJoinClan} className="w-full bg-brand-ink text-white font-bold py-3.5 rounded-2xl hover:bg-slate-800 transition-colors">
+                        <button onClick={handleJoinClan} className="w-full bg-brand-ink dark:bg-slate-700 text-white font-bold py-3.5 rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors">
                             Join Clan
                         </button>
                     </div>
@@ -279,7 +279,7 @@ export default function ClanPage() {
     // ── STATE 2: CLAN DASHBOARD ──
     const stats = clanData?.liveStats || { totalArea: 0, totalDistance: 0, totalLoops: 0 };
     return (
-        <div className="min-h-[100dvh] bg-[#f8fafc] font-body text-brand-ink pb-20">
+        <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-dark-bg font-body text-brand-ink dark:text-dark-text pb-20 transition-colors duration-300">
             {/* Clan Hero Header */}
             <div className="pt-12 pb-8 px-6 bg-gradient-to-br from-brand-ink to-slate-900 text-white rounded-b-[2.5rem] shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-brand-teal/20 rounded-full blur-[50px] -translate-y-1/2 translate-x-1/3"></div>
@@ -299,25 +299,25 @@ export default function ClanPage() {
             </div>
 
             <div className="px-5 mt-6 space-y-6">
-                {success && <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm font-bold text-center border border-green-200">{success}</div>}
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-bold text-center border border-red-200">{error}</div>}
+                {success && <div className="bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 p-3 rounded-xl text-sm font-bold text-center border border-green-200 dark:border-green-800">{success}</div>}
+                {error && <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm font-bold text-center border border-red-200 dark:border-red-800">{error}</div>}
 
                 {/* Invite Link Section */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-brand-border">
+                <div className="bg-white dark:bg-dark-surface p-5 rounded-2xl shadow-sm dark:shadow-lg dark:shadow-black/20 border border-brand-border dark:border-dark-border transition-colors duration-300">
                     <h3 className="font-heading font-bold text-base mb-3 flex items-center gap-2">
                         <Link2 size={18} className="text-brand-teal" /> Invite Friends
                     </h3>
-                    <div className="bg-[#f8fafc] rounded-xl p-3 flex items-center gap-2 mb-3">
+                    <div className="bg-[#f8fafc] dark:bg-dark-surface2 rounded-xl p-3 flex items-center gap-2 mb-3">
                         <input
                             readOnly
                             value={getInviteLink()}
-                            className="flex-1 bg-transparent text-xs font-mono text-brand-muted truncate border-none outline-none"
+                            className="flex-1 bg-transparent text-xs font-mono text-brand-muted dark:text-dark-muted truncate border-none outline-none"
                         />
                         <button
                             onClick={copyInviteLink}
                             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 copied 
-                                    ? 'bg-green-100 text-green-600' 
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
                                     : 'bg-brand-teal/10 text-brand-teal hover:bg-brand-teal/20'
                             }`}
                         >
@@ -354,14 +354,14 @@ export default function ClanPage() {
 
                 {/* Aggregated Stats Row */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border">
+                    <div className="bg-white dark:bg-dark-surface p-4 rounded-2xl shadow-sm dark:shadow-lg dark:shadow-black/20 border border-brand-border dark:border-dark-border transition-colors duration-300">
                         <Map className="text-brand-teal mb-2" size={20} />
-                        <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider mb-0.5">Total Empire</div>
+                        <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider mb-0.5">Total Empire</div>
                         <div className="font-mono text-xl font-bold">{stats.totalArea} <span className="text-xs">m²</span></div>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border">
+                    <div className="bg-white dark:bg-dark-surface p-4 rounded-2xl shadow-sm dark:shadow-lg dark:shadow-black/20 border border-brand-border dark:border-dark-border transition-colors duration-300">
                         <Activity className="text-brand-orange mb-2" size={20} />
-                        <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider mb-0.5">Total Distance</div>
+                        <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider mb-0.5">Total Distance</div>
                         <div className="font-mono text-xl font-bold">{stats.totalDistance.toFixed(1)} <span className="text-xs">km</span></div>
                     </div>
                 </div>
@@ -375,8 +375,8 @@ export default function ClanPage() {
                         {clanData?.members?.map((m) => {
                             const initials = (m.name || 'Runner').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
                             return (
-                                <div key={m._id} className="bg-white p-3 rounded-xl border border-brand-border shadow-sm flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-brand-ink font-bold text-sm">
+                                <div key={m._id} className="bg-white dark:bg-dark-surface p-3 rounded-xl border border-brand-border dark:border-dark-border shadow-sm dark:shadow-lg dark:shadow-black/20 flex items-center gap-3 transition-colors duration-300">
+                                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-dark-surface2 flex items-center justify-center text-brand-ink dark:text-dark-text font-bold text-sm">
                                         {initials}
                                     </div>
                                     <div className="flex-1">
@@ -384,7 +384,7 @@ export default function ClanPage() {
                                             {m.name}
                                             {m._id === user?._id && <span className="text-brand-teal text-xs ml-1">(You)</span>}
                                         </div>
-                                        <div className="text-[10px] text-brand-muted font-mono">{(m.totalDistance || 0).toFixed(1)}km · {m.totalArea || 0}m²</div>
+                                        <div className="text-[10px] text-brand-muted dark:text-dark-muted font-mono">{(m.totalDistance || 0).toFixed(1)}km · {m.totalArea || 0}m²</div>
                                     </div>
                                     {clanData.creator?._id === m._id && (
                                         <div className="text-[9px] bg-brand-orange/10 text-brand-orange px-2 py-0.5 rounded uppercase font-bold">Leader</div>
@@ -399,7 +399,7 @@ export default function ClanPage() {
                 <button 
                     onClick={handleLeaveClan}
                     disabled={leaving}
-                    className="w-full mt-4 flex items-center justify-center gap-2 text-[11px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 transition-all py-4 rounded-xl"
+                    className="w-full mt-4 flex items-center justify-center gap-2 text-[11px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all py-4 rounded-xl"
                 >
                     <LogOut size={14} />
                     {leaving ? 'LEAVING...' : 'LEAVE CLAN'}

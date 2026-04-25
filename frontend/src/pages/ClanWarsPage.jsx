@@ -105,16 +105,16 @@ export default function ClanWarsPage() {
     const enemyScores = war?.liveScores ? (iAmChallenger ? war.liveScores.defender : war.liveScores.challenger) : (iAmChallenger ? war?.scores?.defender : war?.scores?.challenger);
 
     if (loading) return (
-        <div className="min-h-screen bg-[#f8fafc] flex justify-center pt-20">
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-dark-bg flex justify-center pt-20 transition-colors duration-300">
             <Loader2 className="animate-spin text-brand-teal" size={32} />
         </div>
     );
 
     if (!user?.clanId) return (
-        <div className="min-h-[100dvh] bg-[#f8fafc] font-body text-brand-ink p-6 flex flex-col items-center justify-center text-center">
-            <Swords size={48} className="text-brand-muted mb-4" />
+        <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-dark-bg font-body text-brand-ink dark:text-dark-text p-6 flex flex-col items-center justify-center text-center transition-colors duration-300">
+            <Swords size={48} className="text-brand-muted dark:text-dark-muted mb-4" />
             <h1 className="text-2xl font-heading font-bold mb-2">Join a Clan First</h1>
-            <p className="text-brand-muted text-sm mb-6">You need to be in a clan to participate in Clan Wars.</p>
+            <p className="text-brand-muted dark:text-dark-muted text-sm mb-6">You need to be in a clan to participate in Clan Wars.</p>
             <button onClick={() => navigate('/clans')} className="bg-brand-teal text-white font-bold py-3 px-8 rounded-2xl">Go to Clans</button>
         </div>
     );
@@ -132,7 +132,7 @@ export default function ClanWarsPage() {
     };
 
     return (
-        <div className="min-h-[100dvh] bg-[#f8fafc] font-body text-brand-ink pb-24">
+        <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-dark-bg font-body text-brand-ink dark:text-dark-text pb-24 transition-colors duration-300">
             {/* Header */}
             <div className="pt-10 pb-6 px-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-b-[2.5rem] relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-40 h-40 bg-red-500/15 rounded-full blur-[60px]" />
@@ -159,8 +159,8 @@ export default function ClanWarsPage() {
             </div>
 
             <div className="px-5 mt-5 space-y-5">
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-bold text-center border border-red-200">{error}</div>}
-                {success && <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm font-bold text-center border border-green-200">{success}</div>}
+                {error && <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm font-bold text-center border border-red-200 dark:border-red-800">{error}</div>}
+                {success && <div className="bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 p-3 rounded-xl text-sm font-bold text-center border border-green-200 dark:border-green-800">{success}</div>}
 
                 {tab === 'war' && (
                     <>
@@ -168,7 +168,7 @@ export default function ClanWarsPage() {
                         {war?.status === 'active' && (
                             <div className="space-y-4">
                                 {/* VS Header */}
-                                <div className="bg-white rounded-2xl shadow-md border border-brand-border p-5 relative overflow-hidden">
+                                <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-md dark:shadow-lg dark:shadow-black/20 border border-brand-border dark:border-dark-border p-5 relative overflow-hidden transition-colors duration-300">
                                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-red-500/5" />
                                     <div className="relative z-10">
                                         <div className="flex items-center justify-between mb-4">
@@ -204,7 +204,7 @@ export default function ClanWarsPage() {
                                         { icon: Target, label: 'Territories', my: myScores?.territories || 0, enemy: enemyScores?.territories || 0, color: 'text-purple-500' },
                                         { icon: Users, label: 'Active', my: myScores?.participants || 0, enemy: enemyScores?.participants || 0, color: 'text-amber-500' },
                                     ].map(s => (
-                                        <div key={s.label} className="bg-white p-3 rounded-xl border border-brand-border shadow-sm text-center">
+                                        <div key={s.label} className="bg-white dark:bg-dark-surface p-3 rounded-xl border border-brand-border dark:border-dark-border shadow-sm dark:shadow-black/20 text-center transition-colors duration-300">
                                             <s.icon size={16} className={`${s.color} mx-auto mb-1`} />
                                             <div className="text-[9px] text-brand-muted uppercase font-bold tracking-wider">{s.label}</div>
                                             <div className="text-sm font-bold text-emerald-600 mt-1">{s.my}</div>
@@ -213,18 +213,18 @@ export default function ClanWarsPage() {
                                     ))}
                                 </div>
 
-                                <div className="text-center text-[10px] text-brand-muted">Scores auto-refresh every 30 seconds</div>
+                                <div className="text-center text-[10px] text-brand-muted dark:text-dark-muted">Scores auto-refresh every 30 seconds</div>
                             </div>
                         )}
 
                         {/* ── PROPOSED: waiting for leader approval ── */}
                         {war?.status === 'proposed' && (
-                            <div className="bg-white rounded-2xl shadow-md border border-amber-200 p-5">
+                            <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-md dark:shadow-black/20 border border-amber-200 dark:border-amber-800 p-5 transition-colors duration-300">
                                 <div className="flex items-center gap-2 mb-3">
                                     <Clock size={18} className="text-amber-500" />
                                     <span className="font-bold text-sm">Awaiting Leader Approval</span>
                                 </div>
-                                <p className="text-sm text-brand-muted mb-2">
+                                <p className="text-sm text-brand-muted dark:text-dark-muted mb-2">
                                     <strong>{war.proposedBy?.name}</strong> proposed a war against <strong>{enemyClanName}</strong>.
                                 </p>
                                 {isLeader && (
@@ -232,7 +232,7 @@ export default function ClanWarsPage() {
                                         <div>
                                             <label className="text-xs font-bold text-brand-muted uppercase tracking-wider">War Duration</label>
                                             <select value={duration} onChange={e => setDuration(Number(e.target.value))}
-                                                className="w-full mt-1 p-3 bg-[#f8fafc] rounded-xl border-none text-sm font-bold">
+                                                className="w-full mt-1 p-3 bg-[#f8fafc] dark:bg-dark-surface2 rounded-xl border-none text-sm font-bold text-brand-ink dark:text-dark-text">
                                                 <option value={6}>6 Hours</option>
                                                 <option value={12}>12 Hours</option>
                                                 <option value={24}>24 Hours</option>
@@ -247,7 +247,7 @@ export default function ClanWarsPage() {
                                                 <CheckCircle size={16} /> Approve & Send
                                             </button>
                                             <button disabled={actionLoading} onClick={() => doAction(`${API}/clanwars/${war._id}/cancel`)}
-                                                className="flex-1 bg-slate-100 text-brand-ink font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">
+                                                className="flex-1 bg-slate-100 dark:bg-dark-surface2 text-brand-ink dark:text-dark-text font-bold py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-dark-border transition-colors">
                                                 Cancel
                                             </button>
                                         </div>
@@ -259,11 +259,11 @@ export default function ClanWarsPage() {
 
                         {/* ── PENDING: waiting for defender to accept ── */}
                         {war?.status === 'pending' && iAmChallenger && (
-                            <div className="bg-white rounded-2xl shadow-md border border-blue-200 p-5 text-center">
+                            <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-md dark:shadow-black/20 border border-blue-200 dark:border-blue-800 p-5 text-center transition-colors duration-300">
                                 <Loader2 size={24} className="text-blue-500 animate-spin mx-auto mb-3" />
                                 <p className="font-bold text-sm mb-1">Challenge Sent!</p>
-                                <p className="text-sm text-brand-muted">Waiting for <strong>{enemyClanName}</strong> to accept…</p>
-                                <p className="text-xs text-brand-muted mt-2">Duration: {war.duration}h</p>
+                                <p className="text-sm text-brand-muted dark:text-dark-muted">Waiting for <strong>{enemyClanName}</strong> to accept…</p>
+                                <p className="text-xs text-brand-muted dark:text-dark-muted mt-2">Duration: {war.duration}h</p>
                                 {(isLeader || war.proposedBy?._id === user?._id) && (
                                     <button disabled={actionLoading} onClick={() => doAction(`${API}/clanwars/${war._id}/cancel`)}
                                         className="mt-4 text-red-500 text-xs font-bold hover:text-red-600">Cancel Challenge</button>
@@ -273,13 +273,13 @@ export default function ClanWarsPage() {
 
                         {/* ── PENDING: I'm the defender, accept/decline ── */}
                         {war?.status === 'pending' && iAmDefender && (
-                            <div className="bg-white rounded-2xl shadow-md border border-red-200 p-5">
+                            <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-md dark:shadow-black/20 border border-red-200 dark:border-red-800 p-5 transition-colors duration-300">
                                 <div className="flex items-center gap-2 mb-3">
                                     <Swords size={18} className="text-red-500" />
                                     <span className="font-bold text-sm text-red-600">Incoming War Challenge!</span>
                                 </div>
-                                <p className="text-sm text-brand-muted mb-1"><strong>{war.challengerClan?.name}</strong> challenges you to a <strong>{war.duration}h</strong> war!</p>
-                                <p className="text-xs text-brand-muted mb-4">Members: {war.challengerClan?.members?.length || '?'}</p>
+                                <p className="text-sm text-brand-muted dark:text-dark-muted mb-1"><strong>{war.challengerClan?.name}</strong> challenges you to a <strong>{war.duration}h</strong> war!</p>
+                                <p className="text-xs text-brand-muted dark:text-dark-muted mb-4">Members: {war.challengerClan?.members?.length || '?'}</p>
                                 {isLeader ? (
                                     <div className="flex gap-2">
                                         <button disabled={actionLoading} onClick={() => doAction(`${API}/clanwars/${war._id}/accept`)}
@@ -287,7 +287,7 @@ export default function ClanWarsPage() {
                                             <Swords size={16} /> Accept War
                                         </button>
                                         <button disabled={actionLoading} onClick={() => doAction(`${API}/clanwars/${war._id}/decline`)}
-                                            className="flex-1 bg-slate-100 text-brand-ink font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">
+                                            className="flex-1 bg-slate-100 dark:bg-dark-surface2 text-brand-ink dark:text-dark-text font-bold py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-dark-border transition-colors">
                                             Decline
                                         </button>
                                     </div>
@@ -300,7 +300,7 @@ export default function ClanWarsPage() {
                         {/* ── NO WAR: search & challenge ── */}
                         {!war && (
                             <div className="space-y-5">
-                                <div className="bg-white rounded-2xl shadow-md border border-brand-border p-5 relative overflow-hidden">
+                                <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-md dark:shadow-black/20 border border-brand-border dark:border-dark-border p-5 relative overflow-hidden transition-colors duration-300">
                                     <div className="absolute -right-6 -top-6 w-24 h-24 bg-red-400 rounded-full blur-[40px] opacity-15" />
                                     <h2 className="font-heading text-xl font-bold flex items-center gap-2 mb-4">
                                         <Search size={20} className="text-red-400" /> Find a Rival
@@ -309,7 +309,7 @@ export default function ClanWarsPage() {
                                         <input type="text" placeholder="Search clan name…" value={searchQ}
                                             onChange={e => setSearchQ(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && searchClans()}
-                                            className="flex-1 bg-[#f8fafc] p-3 rounded-xl text-sm border-none focus:ring-2 focus:ring-red-300 transition-all" />
+                                            className="flex-1 bg-[#f8fafc] dark:bg-dark-surface2 p-3 rounded-xl text-sm border-none focus:ring-2 focus:ring-red-300 transition-all text-brand-ink dark:text-dark-text" />
                                         <button onClick={searchClans} disabled={searching}
                                             className="bg-slate-900 text-white px-4 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors">
                                             {searching ? <Loader2 size={16} className="animate-spin" /> : 'Search'}
@@ -320,7 +320,7 @@ export default function ClanWarsPage() {
                                     <div className="mb-4">
                                         <label className="text-xs font-bold text-brand-muted uppercase tracking-wider">War Duration</label>
                                         <select value={duration} onChange={e => setDuration(Number(e.target.value))}
-                                            className="w-full mt-1 p-3 bg-[#f8fafc] rounded-xl border-none text-sm font-bold">
+                                            className="w-full mt-1 p-3 bg-[#f8fafc] dark:bg-dark-surface2 rounded-xl border-none text-sm font-bold text-brand-ink dark:text-dark-text">
                                             <option value={6}>6 Hours</option>
                                             <option value={12}>12 Hours</option>
                                             <option value={24}>24 Hours (default)</option>
@@ -333,10 +333,10 @@ export default function ClanWarsPage() {
                                     {searchResults.length > 0 && (
                                         <div className="space-y-2">
                                             {searchResults.map(c => (
-                                                <div key={c._id} className="flex items-center justify-between bg-[#f8fafc] p-3 rounded-xl">
+                                                <div key={c._id} className="flex items-center justify-between bg-[#f8fafc] dark:bg-dark-surface2 p-3 rounded-xl">
                                                     <div>
                                                         <div className="font-bold text-sm">{c.name}</div>
-                                                        <div className="text-[10px] text-brand-muted">{c.memberCount} members</div>
+                                                        <div className="text-[10px] text-brand-muted dark:text-dark-muted">{c.memberCount} members</div>
                                                     </div>
                                                     <button disabled={actionLoading}
                                                         onClick={() => doAction(`${API}/clanwars/propose`, 'POST', { targetClanId: c._id, duration })}
@@ -348,7 +348,7 @@ export default function ClanWarsPage() {
                                         </div>
                                     )}
                                     {searchResults.length === 0 && searchQ && !searching && (
-                                        <p className="text-sm text-brand-muted text-center py-3">No clans found</p>
+                                        <p className="text-sm text-brand-muted dark:text-dark-muted text-center py-3">No clans found</p>
                                     )}
                                 </div>
 
@@ -378,7 +378,7 @@ export default function ClanWarsPage() {
                         {history.length === 0 && (
                             <div className="text-center py-12">
                                 <Trophy size={40} className="text-brand-muted mx-auto mb-3 opacity-30" />
-                                <p className="text-brand-muted text-sm">No past wars yet</p>
+                                <p className="text-brand-muted dark:text-dark-muted text-sm">No past wars yet</p>
                             </div>
                         )}
                         {history.map(w => {
@@ -388,7 +388,7 @@ export default function ClanWarsPage() {
                             const myTotal = isCh ? w.scores?.challenger?.total : w.scores?.defender?.total;
                             const enemyTotal = isCh ? w.scores?.defender?.total : w.scores?.challenger?.total;
                             return (
-                                <div key={w._id} className={`bg-white p-4 rounded-xl border shadow-sm ${w.status === 'completed' ? (won ? 'border-emerald-200' : 'border-red-200') : 'border-brand-border'}`}>
+                                <div key={w._id} className={`bg-white dark:bg-dark-surface p-4 rounded-xl border shadow-sm dark:shadow-black/20 transition-colors duration-300 ${w.status === 'completed' ? (won ? 'border-emerald-200 dark:border-emerald-800' : 'border-red-200 dark:border-red-800') : 'border-brand-border dark:border-dark-border'}`}>
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <div className="font-bold text-sm flex items-center gap-2">
@@ -405,7 +405,7 @@ export default function ClanWarsPage() {
                                                 <div className="text-xs text-brand-muted mt-1 font-mono">{myTotal || 0} — {enemyTotal || 0}</div>
                                             )}
                                         </div>
-                                        <div className="text-[10px] text-brand-muted">{new Date(w.updatedAt).toLocaleDateString()}</div>
+                                        <div className="text-[10px] text-brand-muted dark:text-dark-muted">{new Date(w.updatedAt).toLocaleDateString()}</div>
                                     </div>
                                 </div>
                             );

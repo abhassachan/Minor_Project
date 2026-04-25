@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -125,22 +126,23 @@ export default function DashboardPage() {
     });
 
     return (
-        <div className="min-h-screen bg-brand-offwhite font-body text-brand-ink">
+        <div className="min-h-screen bg-brand-offwhite dark:bg-dark-bg font-body text-brand-ink dark:text-dark-text transition-colors duration-300">
             {/* NAVBAR */}
             <nav className="sticky top-0 z-50 glass-nav h-16 flex items-center px-6">
                 <div className="w-full flex justify-between items-center">
                     <Link to="/" className="flex items-center gap-1 text-xl font-heading tracking-tight">
-                        <span className="text-brand-ink">TERRITORY</span>
+                        <span className="text-brand-ink dark:text-dark-text">TERRITORY</span>
                         <span className="text-brand-teal">RUN</span>
                     </Link>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <ThemeToggle />
                         <Link to="/map"
                             className="bg-brand-teal text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition-all">
                             ▶ START RUN
                         </Link>
                         <button className="relative">
                             <span className="text-xl">🔔</span>
-                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-danger rounded-full border border-white"></span>
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-danger rounded-full border border-white dark:border-dark-surface"></span>
                         </button>
                         <div className="w-[34px] h-[34px] rounded-full orange-gradient border-2 border-brand-teal flex items-center justify-center text-[11px] font-bold text-white shadow-sm">
                             {initials}
@@ -161,22 +163,22 @@ export default function DashboardPage() {
                                 <div className="w-14 h-14 rounded-full orange-gradient flex items-center justify-center text-white font-bold text-lg">
                                     {initials}
                                 </div>
-                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-brand-teal rounded-full border-2 border-white flex items-center justify-center text-[8px] text-white">✓</span>
+                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-brand-teal rounded-full border-2 border-white dark:border-dark-surface flex items-center justify-center text-[8px] text-white">✓</span>
                             </div>
                             <div>
                                 <h2 className="font-heading text-[21px] leading-tight">{user?.name || 'Runner'}</h2>
-                                <span className="text-[11px] font-medium text-brand-muted uppercase tracking-wider">{rank}</span>
+                                <span className="text-[11px] font-medium text-brand-muted dark:text-dark-muted uppercase tracking-wider">{rank}</span>
                             </div>
                         </div>
 
                         {/* Level & Defenses */}
                         <div className="grid grid-cols-2 gap-2 mb-4">
-                            <div className="bg-brand-surface2 rounded-xl p-3 text-center">
-                                <span className="block text-[10px] text-brand-muted uppercase mb-1">Level</span>
+                            <div className="bg-brand-surface2 dark:bg-dark-surface2 rounded-xl p-3 text-center">
+                                <span className="block text-[10px] text-brand-muted dark:text-dark-muted uppercase mb-1">Level</span>
                                 <span className="font-mono text-[20px] leading-none">{level}</span>
                             </div>
-                            <div className="bg-brand-surface2 rounded-xl p-3 text-center">
-                                <span className="block text-[10px] text-brand-muted uppercase mb-1">Territories</span>
+                            <div className="bg-brand-surface2 dark:bg-dark-surface2 rounded-xl p-3 text-center">
+                                <span className="block text-[10px] text-brand-muted dark:text-dark-muted uppercase mb-1">Territories</span>
                                 <span className="font-mono text-[20px] leading-none">{stats?.totalTerritories || 0}</span>
                             </div>
                         </div>
@@ -184,26 +186,26 @@ export default function DashboardPage() {
                         {/* XP Bar */}
                         <div className="mb-4">
                             <div className="flex justify-between items-end mb-1.5">
-                                <span className="text-[10px] font-medium text-brand-muted uppercase">Empire XP</span>
-                                <span className="font-mono text-[11px] text-brand-muted">{totalXP.toLocaleString()} / {xpNext.toLocaleString()}</span>
+                                <span className="text-[10px] font-medium text-brand-muted dark:text-dark-muted uppercase">Empire XP</span>
+                                <span className="font-mono text-[11px] text-brand-muted dark:text-dark-muted">{totalXP.toLocaleString()} / {xpNext.toLocaleString()}</span>
                             </div>
-                            <div className="h-[5px] w-full bg-brand-surface2 rounded-full overflow-hidden">
+                            <div className="h-[5px] w-full bg-brand-surface2 dark:bg-dark-surface2 rounded-full overflow-hidden">
                                 <div className="h-full teal-gradient rounded-full transition-all duration-1000" style={{ width: `${xpPercent}%` }}></div>
                             </div>
                         </div>
 
                         {/* Quick Stats */}
-                        <div className="border-t border-brand-border pt-4">
+                        <div className="border-t border-brand-border dark:border-dark-border pt-4">
                             <div className="flex justify-between text-[12px] mb-2">
-                                <span className="text-brand-muted">Total Runs</span>
+                                <span className="text-brand-muted dark:text-dark-muted">Total Runs</span>
                                 <span className="font-mono font-medium">{stats?.totalRuns || 0}</span>
                             </div>
                             <div className="flex justify-between text-[12px] mb-2">
-                                <span className="text-brand-muted">Total Distance</span>
+                                <span className="text-brand-muted dark:text-dark-muted">Total Distance</span>
                                 <span className="font-mono font-medium">{(stats?.totalDistance || 0).toFixed(1)} km</span>
                             </div>
                             <div className="flex justify-between text-[12px]">
-                                <span className="text-brand-muted">Total Time</span>
+                                <span className="text-brand-muted dark:text-dark-muted">Total Time</span>
                                 <span className="font-mono font-medium">{Math.floor((stats?.totalDuration || 0) / 60)}m</span>
                             </div>
                         </div>
@@ -211,7 +213,7 @@ export default function DashboardPage() {
 
                     {/* Logout */}
                     <button onClick={handleLogout}
-                        className="w-full card-base shadow-card p-3 text-center text-sm font-medium text-brand-danger hover:bg-red-50 transition-colors">
+                        className="w-full card-base shadow-card p-3 text-center text-sm font-medium text-brand-danger hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
                         🚪 Sign Out
                     </button>
                 </aside>
@@ -224,7 +226,7 @@ export default function DashboardPage() {
                         <div className="flex gap-1">
                             {['all', 'run', 'challenge'].map(f => (
                                 <button key={f} onClick={() => setFilter(f)}
-                                    className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all ${filter === f ? 'bg-brand-ink text-white' : 'bg-white text-brand-muted border border-brand-border'}`}>
+                                    className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all ${filter === f ? 'bg-brand-ink dark:bg-brand-teal text-white' : 'bg-white dark:bg-dark-surface text-brand-muted dark:text-dark-muted border border-brand-border dark:border-dark-border'}`}>
                                     {f.charAt(0).toUpperCase() + f.slice(1)}
                                 </button>
                             ))}
@@ -234,7 +236,7 @@ export default function DashboardPage() {
                     {/* Run Cards from API */}
                     {runs.length === 0 && (
                         <div className="card-base shadow-card p-8 text-center">
-                            <p className="text-brand-muted text-sm">No runs yet. Start your first run!</p>
+                            <p className="text-brand-muted dark:text-dark-muted text-sm">No runs yet. Start your first run!</p>
                             <Link to="/map" className="inline-block mt-4 bg-brand-teal text-white px-6 py-2.5 rounded-full text-sm font-bold hover:opacity-90 transition-all">
                                 ▶ Start Run
                             </Link>
@@ -251,40 +253,40 @@ export default function DashboardPage() {
 
                         return (
                             <article key={run._id || i} className="card-base shadow-card cursor-pointer">
-                                <div className="p-[14px_18px] flex items-center justify-between hover:bg-brand-surface2 transition-colors rounded-[inherit]"
+                                <div className="p-[14px_18px] flex items-center justify-between hover:bg-brand-surface2 dark:hover:bg-dark-surface2 transition-colors rounded-[inherit]"
                                     onClick={() => setExpandedRun(isOpen ? null : i)}>
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full orange-gradient border border-brand-border"></div>
+                                        <div className="w-10 h-10 rounded-full orange-gradient border border-brand-border dark:border-dark-border"></div>
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[14px] font-semibold">{user?.name || 'Runner'}</span>
-                                                <span className="text-[12px] text-brand-muted">• {dateStr} · {timeStr}</span>
+                                                <span className="text-[12px] text-brand-muted dark:text-dark-muted">• {dateStr} · {timeStr}</span>
                                             </div>
-                                            <p className="text-[12px] text-brand-muted mt-0.5">Recorded Run · <span className="text-brand-ink font-medium">{run.distance.toFixed(2)} km</span></p>
+                                            <p className="text-[12px] text-brand-muted dark:text-dark-muted mt-0.5">Recorded Run · <span className="text-brand-ink dark:text-dark-text font-medium">{run.distance.toFixed(2)} km</span></p>
                                         </div>
                                     </div>
-                                    <div className={`text-[20px] text-brand-muted transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}>›</div>
+                                    <div className={`text-[20px] text-brand-muted dark:text-dark-muted transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}>›</div>
                                 </div>
 
                                 <div className={`grid transition-[grid-template-rows] duration-300 ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                                     <div className="overflow-hidden">
-                                        <div className="border-t border-brand-border p-[14px_18px]">
-                                            <div className="grid grid-cols-4 gap-4 border-b border-brand-border pb-4 mb-4">
+                                        <div className="border-t border-brand-border dark:border-dark-border p-[14px_18px]">
+                                            <div className="grid grid-cols-4 gap-4 border-b border-brand-border dark:border-dark-border pb-4 mb-4">
                                                 <div>
-                                                    <span className="block text-[10px] text-brand-muted uppercase mb-1">Distance</span>
-                                                    <div className="flex items-baseline gap-1"><span className="font-mono text-[17px]">{run.distance.toFixed(2)}</span><span className="text-[10px] text-brand-muted uppercase">km</span></div>
+                                                    <span className="block text-[10px] text-brand-muted dark:text-dark-muted uppercase mb-1">Distance</span>
+                                                    <div className="flex items-baseline gap-1"><span className="font-mono text-[17px]">{run.distance.toFixed(2)}</span><span className="text-[10px] text-brand-muted dark:text-dark-muted uppercase">km</span></div>
                                                 </div>
                                                 <div>
-                                                    <span className="block text-[10px] text-brand-muted uppercase mb-1">Time</span>
+                                                    <span className="block text-[10px] text-brand-muted dark:text-dark-muted uppercase mb-1">Time</span>
                                                     <div className="flex items-baseline gap-1"><span className="font-mono text-[17px]">{mins}m {secs}s</span></div>
                                                 </div>
                                                 <div>
-                                                    <span className="block text-[10px] text-brand-muted uppercase mb-1">Steps</span>
+                                                    <span className="block text-[10px] text-brand-muted dark:text-dark-muted uppercase mb-1">Steps</span>
                                                     <div className="flex items-baseline gap-1"><span className="font-mono text-[17px]">{run.steps?.toLocaleString()}</span></div>
                                                 </div>
                                                 <div>
-                                                    <span className="block text-[10px] text-brand-muted uppercase mb-1">XP Earned</span>
-                                                    <div className="flex items-baseline gap-1"><span className="font-mono text-[17px]">{run.xpEarned}</span><span className="text-[10px] text-brand-muted uppercase">xp</span></div>
+                                                    <span className="block text-[10px] text-brand-muted dark:text-dark-muted uppercase mb-1">XP Earned</span>
+                                                    <div className="flex items-baseline gap-1"><span className="font-mono text-[17px]">{run.xpEarned}</span><span className="text-[10px] text-brand-muted dark:text-dark-muted uppercase">xp</span></div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
@@ -309,7 +311,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="space-y-3">
                             {challenges.filter(c => filter === 'all' || filter === 'challenge').map((ch, i) => (
-                                <div key={i} className="bg-brand-surface2 rounded-xl p-3">
+                                <div key={i} className="bg-brand-surface2 dark:bg-dark-surface2 rounded-xl p-3">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-2">
                                             <h4 className="text-[13px] font-semibold">{ch.title}</h4>
@@ -317,11 +319,11 @@ export default function DashboardPage() {
                                         </div>
                                         <span className="text-[10px] text-brand-teal font-mono">+{ch.xp} XP</span>
                                     </div>
-                                    <p className="text-[11px] text-brand-muted mb-2">{ch.desc}</p>
-                                    <div className="h-1.5 bg-white rounded-full overflow-hidden">
+                                    <p className="text-[11px] text-brand-muted dark:text-dark-muted mb-2">{ch.desc}</p>
+                                    <div className="h-1.5 bg-white dark:bg-dark-bg rounded-full overflow-hidden">
                                         <div className="h-full teal-gradient rounded-full" style={{ width: `${ch.progress}%` }}></div>
                                     </div>
-                                    <p className="text-[10px] text-brand-muted mt-1 text-right">{ch.progress}% complete</p>
+                                    <p className="text-[10px] text-brand-muted dark:text-dark-muted mt-1 text-right">{ch.progress}% complete</p>
                                 </div>
                             ))}
                         </div>
@@ -335,10 +337,10 @@ export default function DashboardPage() {
                         </div>
                         <div className="space-y-3">
                             {rivals.length === 0 ? (
-                                <p className="text-[11px] text-brand-muted">No rivals found.</p>
+                                <p className="text-[11px] text-brand-muted dark:text-dark-muted">No rivals found.</p>
                             ) : (
                                 rivals.map((r, i) => (
-                                    <div key={r._id || i} className={`flex items-center gap-3 bg-brand-surface2 rounded-xl p-3 ${r.isYou ? 'border border-brand-teal bg-brand-teal/5' : ''}`}>
+                                    <div key={r._id || i} className={`flex items-center gap-3 bg-brand-surface2 dark:bg-dark-surface2 rounded-xl p-3 ${r.isYou ? 'border border-brand-teal bg-brand-teal/5 dark:bg-brand-teal/10' : ''}`}>
                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm ${r.isYou ? 'bg-brand-teal' : 'orange-gradient'}`}>
                                             #{r.rank}
                                         </div>
@@ -346,7 +348,7 @@ export default function DashboardPage() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[13px] font-semibold">{r.name} {r.isYou && '(You)'}</span>
                                             </div>
-                                            <p className="text-[11px] text-brand-muted">{r.weeklyXP || 0} XP this week</p>
+                                            <p className="text-[11px] text-brand-muted dark:text-dark-muted">{r.weeklyXP || 0} XP this week</p>
                                         </div>
                                     </div>
                                 ))
@@ -360,7 +362,7 @@ export default function DashboardPage() {
                             <h3 className="font-heading text-lg">League</h3>
                             <span className="text-[10px] bg-brand-teal/10 text-brand-teal px-2 py-0.5 rounded-full font-bold">{league.toUpperCase()}</span>
                         </div>
-                        <div className="flex items-center gap-3 bg-brand-surface2 rounded-xl p-3">
+                        <div className="flex items-center gap-3 bg-brand-surface2 dark:bg-dark-surface2 rounded-xl p-3">
                             <div className="text-2xl">
                                 {league === 'Bronze' && '🥉'}
                                 {league === 'Silver' && '🥈'}
@@ -371,7 +373,7 @@ export default function DashboardPage() {
                             </div>
                             <div>
                                 <span className="text-[13px] font-semibold">{league} League</span>
-                                <p className="text-[11px] text-brand-muted">Weekly XP: {profile?.weeklyXP || 0}</p>
+                                <p className="text-[11px] text-brand-muted dark:text-dark-muted">Weekly XP: {profile?.weeklyXP || 0}</p>
                                 {leagueData && (
                                     <p className="text-[11px] font-bold text-brand-teal mt-0.5">
                                         Rank #{leagueData.rankings.find(r => r.isYou)?.rank || '?'} of {leagueData.totalPlayers || 0}
@@ -390,14 +392,14 @@ export default function DashboardPage() {
                                 <span className="font-mono text-[16px] font-bold text-brand-orange">{streak.current}</span>
                             </div>
                         </div>
-                        <p className="text-[11px] text-brand-muted mb-3">Longest: {streak.longest} days</p>
+                        <p className="text-[11px] text-brand-muted dark:text-dark-muted mb-3">Longest: {streak.longest} days</p>
                         <div className="flex justify-between">
                             {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
                                 <div key={i} className="text-center">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 ${ranThisWeek[i] ? 'bg-brand-teal text-white' : 'bg-brand-surface2 text-brand-muted'}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 ${ranThisWeek[i] ? 'bg-brand-teal text-white' : 'bg-brand-surface2 dark:bg-dark-surface2 text-brand-muted dark:text-dark-muted'}`}>
                                         {ranThisWeek[i] ? '✓' : d}
                                     </div>
-                                    <span className="text-[9px] text-brand-muted">{d}</span>
+                                    <span className="text-[9px] text-brand-muted dark:text-dark-muted">{d}</span>
                                 </div>
                             ))}
                         </div>

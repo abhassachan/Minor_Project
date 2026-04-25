@@ -59,7 +59,7 @@ export default function ProfilePage() {
     const initials = (user.name || 'Runner').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 
     return (
-        <div className="min-h-[100dvh] bg-[#f8fafc] font-body text-brand-ink pb-24">
+        <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-dark-bg font-body text-brand-ink dark:text-dark-text pb-24 transition-colors duration-300">
             {/* Header & Avatar */}
             <div className="bg-gradient-to-br from-brand-ink via-slate-800 to-brand-teal text-white pt-16 pb-12 px-6 rounded-b-[2.5rem] relative shadow-lg">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
@@ -91,49 +91,49 @@ export default function ProfilePage() {
                 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                    <div className="bg-white dark:bg-dark-surface p-4 rounded-2xl shadow-sm dark:shadow-black/20 border border-brand-border dark:border-dark-border flex items-center gap-3 transition-colors duration-300">
                         <div className="w-10 h-10 bg-brand-teal/10 rounded-xl flex items-center justify-center text-brand-teal">
                             <Activity size={20} />
                         </div>
                         <div>
-                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Distance</div>
+                            <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider">Distance</div>
                             <div className="font-mono font-bold text-lg">{user.totalDistance?.toFixed(1) || '0.0'} <span className="text-[10px]">km</span></div>
                         </div>
                     </div>
                     
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                    <div className="bg-white dark:bg-dark-surface p-4 rounded-2xl shadow-sm dark:shadow-black/20 border border-brand-border dark:border-dark-border flex items-center gap-3 transition-colors duration-300">
                         <div className="w-10 h-10 bg-brand-orange/10 rounded-xl flex items-center justify-center text-brand-orange">
                             <Map size={20} />
                         </div>
                         <div>
-                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Territory</div>
+                            <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider">Territory</div>
                             <div className="font-mono font-bold text-lg">{user.totalArea || 0} <span className="text-[10px]">m²</span></div>
                         </div>
                     </div>
                     
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                    <div className="bg-white dark:bg-dark-surface p-4 rounded-2xl shadow-sm dark:shadow-black/20 border border-brand-border dark:border-dark-border flex items-center gap-3 transition-colors duration-300">
                         <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500">
                             <Trophy size={20} />
                         </div>
                         <div>
-                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Missions</div>
+                            <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider">Missions</div>
                             <div className="font-mono font-bold text-lg">{user.totalLoops || 0} <span className="text-[10px]">won</span></div>
                         </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-border flex items-center gap-3">
+                    <div className="bg-white dark:bg-dark-surface p-4 rounded-2xl shadow-sm dark:shadow-black/20 border border-brand-border dark:border-dark-border flex items-center gap-3 transition-colors duration-300">
                         <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
                             <Hexagon size={20} />
                         </div>
                         <div>
-                            <div className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Level XP</div>
+                            <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider">Level XP</div>
                             <div className="font-mono font-bold text-lg">{user.weeklyXP || 0}</div>
                         </div>
                     </div>
                 </div>
 
                 {/* Achievements Section */}
-                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-brand-border mt-4">
+                <div className="bg-white dark:bg-dark-surface p-5 rounded-[2rem] shadow-sm dark:shadow-black/20 border border-brand-border dark:border-dark-border mt-4 transition-colors duration-300">
                     <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
                         <Medal size={20} className="text-amber-400" /> Trophy Cabinet
                     </h3>
@@ -149,7 +149,7 @@ export default function ProfilePage() {
                                 </div>
                             ))
                         ) : (
-                            <div className="text-sm text-brand-muted text-center w-full py-4 bg-brand-surface2 rounded-xl">
+                            <div className="text-sm text-brand-muted dark:text-dark-muted text-center w-full py-4 bg-brand-surface2 dark:bg-dark-surface2 rounded-xl">
                                 No achievements yet. Start running!
                             </div>
                         )}
@@ -158,11 +158,11 @@ export default function ProfilePage() {
 
                 {/* Account Actions */}
                 <div className="pt-4">
-                    <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-red-50 text-red-600 font-bold border border-red-100 hover:bg-red-100 transition-colors">
+                    <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-bold border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors">
                         <LogOut size={18} /> Sign Out
                     </button>
                     <div className="text-center mt-6 py-4">
-                         <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Territory Run v1.0.0</p>
+                         <p className="text-[10px] font-bold text-brand-muted dark:text-dark-muted uppercase tracking-widest">Territory Run v1.0.0</p>
                     </div>
                 </div>
 
@@ -170,38 +170,38 @@ export default function ProfilePage() {
 
             {/* Settings Modal Overlay */}
             {showSettings && (
-                <div className="fixed inset-0 bg-brand-ink/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-5 border-b border-brand-border flex justify-between items-center bg-brand-surface">
-                            <h3 className="font-heading font-bold text-lg text-brand-ink">Edit Profile</h3>
-                            <button onClick={() => setShowSettings(false)} className="text-brand-muted hover:text-brand-ink transition p-1 bg-white rounded-full shadow-sm border border-brand-border">
+                <div className="fixed inset-0 bg-brand-ink/60 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-dark-surface rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-5 border-b border-brand-border dark:border-dark-border flex justify-between items-center bg-brand-surface dark:bg-dark-surface2">
+                            <h3 className="font-heading font-bold text-lg text-brand-ink dark:text-dark-text">Edit Profile</h3>
+                            <button onClick={() => setShowSettings(false)} className="text-brand-muted dark:text-dark-muted hover:text-brand-ink dark:hover:text-dark-text transition p-1 bg-white dark:bg-dark-surface rounded-full shadow-sm border border-brand-border dark:border-dark-border">
                                 <X size={18} />
                             </button>
                         </div>
                         <div className="p-5 space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-brand-muted uppercase tracking-wider mb-1">Display Name</label>
+                                <label className="block text-xs font-bold text-brand-muted dark:text-dark-muted uppercase tracking-wider mb-1">Display Name</label>
                                 <input 
                                     type="text" 
                                     value={editName} 
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className="w-full bg-brand-surface2 border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition"
+                                    className="w-full bg-brand-surface2 dark:bg-dark-surface2 border border-brand-border dark:border-dark-border rounded-xl px-4 py-3 text-sm text-brand-ink dark:text-dark-text focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-brand-muted uppercase tracking-wider mb-1">Username</label>
+                                <label className="block text-xs font-bold text-brand-muted dark:text-dark-muted uppercase tracking-wider mb-1">Username</label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted">@</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted dark:text-dark-muted">@</span>
                                     <input 
                                         type="text" 
                                         value={editUsername} 
                                         onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                        className="w-full bg-brand-surface2 border border-brand-border rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition"
+                                        className="w-full bg-brand-surface2 dark:bg-dark-surface2 border border-brand-border dark:border-dark-border rounded-xl pl-9 pr-4 py-3 text-sm text-brand-ink dark:text-dark-text focus:outline-none focus:border-brand-teal focus:ring-1 focus:ring-brand-teal transition"
                                     />
                                 </div>
                             </div>
                         </div>
-                        <div className="p-5 bg-brand-surface border-t border-brand-border">
+                        <div className="p-5 bg-brand-surface dark:bg-dark-surface2 border-t border-brand-border dark:border-dark-border">
                             <button 
                                 onClick={handleSaveSettings}
                                 disabled={isSaving || !editName.trim() || !editUsername.trim()}

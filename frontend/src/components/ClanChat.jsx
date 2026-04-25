@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, MessageCircle, X, CheckCheck } from 'lucide-react';
+import { useTheme } from '../ThemeContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -12,6 +13,7 @@ export default function ClanChat({ clanId, currentUserId }) {
     const bottomRef = useRef(null);
     const lastMsgIdRef = useRef(null);
     const token = localStorage.getItem('token');
+    const { isDark } = useTheme();
 
     const markAsRead = async () => {
         if (!clanId || !token) return;
@@ -131,7 +133,7 @@ export default function ClanChat({ clanId, currentUserId }) {
 
     return (
         <div style={{ position:'fixed', bottom:64, right:0, left:0, top:0, zIndex:1000, display:'flex', flexDirection:'column',
-            background:'#f8fafc', fontFamily:'"Inter","system-ui",sans-serif' }}>
+            background: isDark ? '#0f1117' : '#f8fafc', fontFamily:'"Inter","system-ui",sans-serif' }}>
             {/* Header */}
             <div style={{ padding:'12px 16px', background:'linear-gradient(135deg,#1e293b,#0f172a)', color:'#fff',
                 display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
@@ -149,7 +151,7 @@ export default function ClanChat({ clanId, currentUserId }) {
             {/* Messages */}
             <div style={{ flex:1, overflowY:'auto', padding:'12px 16px', display:'flex', flexDirection:'column', gap:4 }}>
                 {messages.length === 0 && (
-                    <div style={{ textAlign:'center', padding:40, color:'#94a3b8', fontSize:13 }}>
+                    <div style={{ textAlign:'center', padding:40, color: isDark ? '#8b8d97' : '#94a3b8', fontSize:13 }}>
                         No messages yet. Say hi! 👋
                     </div>
                 )}
@@ -181,10 +183,10 @@ export default function ClanChat({ clanId, currentUserId }) {
                             )}
                             <div style={{
                                 maxWidth:'75%', padding:'8px 12px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                background: isMe ? 'linear-gradient(135deg,#23a094,#1a8a7f)' : '#fff',
-                                color: isMe ? '#fff' : '#1e293b', fontSize:14, lineHeight:1.4, wordBreak:'break-word',
-                                boxShadow: isMe ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-                                border: isMe ? 'none' : '1px solid #e2e8f0',
+                                background: isMe ? 'linear-gradient(135deg,#23a094,#1a8a7f)' : (isDark ? '#181a20' : '#fff'),
+                                color: isMe ? '#fff' : (isDark ? '#e4e5ea' : '#1e293b'), fontSize:14, lineHeight:1.4, wordBreak:'break-word',
+                                boxShadow: isMe ? 'none' : (isDark ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08)'),
+                                border: isMe ? 'none' : (isDark ? '1px solid #2a2d37' : '1px solid #e2e8f0'),
                             }}>
                                 {m.text}
                             </div>
@@ -206,15 +208,16 @@ export default function ClanChat({ clanId, currentUserId }) {
             </div>
 
             {/* Input */}
-            <div style={{ padding:'8px 12px', background:'#fff', borderTop:'1px solid #e2e8f0',
+            <div style={{ padding:'8px 12px', background: isDark ? '#181a20' : '#fff', borderTop: isDark ? '1px solid #2a2d37' : '1px solid #e2e8f0',
                 display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
                 <input
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     placeholder="Type a message..."
-                    style={{ flex:1, padding:'10px 14px', borderRadius:20, border:'1px solid #e2e8f0',
-                        fontSize:14, outline:'none', background:'#f8fafc', fontFamily:'inherit' }}
+                    style={{ flex:1, padding:'10px 14px', borderRadius:20, border: isDark ? '1px solid #2a2d37' : '1px solid #e2e8f0',
+                        fontSize:14, outline:'none', background: isDark ? '#1f2129' : '#f8fafc', fontFamily:'inherit',
+                        color: isDark ? '#e4e5ea' : '#1e293b' }}
                     maxLength={1000}
                 />
                 <button onClick={handleSend} disabled={sending || !text.trim()}
