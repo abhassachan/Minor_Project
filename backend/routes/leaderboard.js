@@ -14,20 +14,26 @@ router.get('/', auth, async (req, res) => {
         const leagueUsers = await User.find({ 'league.name': user.league.name })
             .select('name username weeklyXP league profilePic')
             .sort({ weeklyXP: -1 })
-            .limit(10);
+            .limit(50); // Increased limit to show more players
 
         // Calculate promotion/demotion zones
-        const rankings = leagueUsers.map((u, i) => ({
-            rank: i + 1,
-            _id: u._id,
-            name: u.name,
-            username: u.username,
-            weeklyXP: u.weeklyXP,
-            league: u.league.name,
-            profilePic: u.profilePic,
-            isYou: u._id.toString() === req.userId,
-            zone: i < 3 ? 'promotion' : i >= leagueUsers.length - 3 ? 'demotion' : 'safe',
-        }));
+        const rankings = leagueUsers.map((u, i) => {
+            let zone = 'safe';
+            if (i < 5 && u.league.name !== 'Conqueror') zone = 'promotion';
+            else if (i >= 15 && u.league.name !== 'Bronze') zone = 'demotion';
+
+            return {
+                rank: i + 1,
+                _id: u._id,
+                name: u.name,
+                username: u.username,
+                weeklyXP: u.weeklyXP,
+                league: u.league.name,
+                profilePic: u.profilePic,
+                isYou: u._id.toString() === req.userId,
+                zone,
+            };
+        });
 
         res.json({
             league: user.league.name,

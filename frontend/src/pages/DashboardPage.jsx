@@ -364,7 +364,7 @@ export default function DashboardPage() {
                                 {league === 'Gold' && '🥇'}
                                 {league === 'Platinum' && '💎'}
                                 {league === 'Diamond' && '💠'}
-                                {league === 'Legend' && '🏆'}
+                                {league === 'Conqueror' && '🏆'}
                             </div>
                             <div>
                                 <span className="text-[13px] font-semibold">{league} League</span>
