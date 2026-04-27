@@ -34,6 +34,9 @@ app.get('/', (req, res) => {
     res.json({ status: 'Territory Run API is running 🏃' });
 });
 
+// ── Cron Jobs ────────────────────────────────────────
+require('./cron/weeklyLeaderboard');
+
 // ── Connect to MongoDB & Start Server ────────────────
 const PORT = process.env.PORT || 5000;
 
