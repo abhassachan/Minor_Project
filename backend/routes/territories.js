@@ -78,11 +78,21 @@ router.post('/record', auth, async (req, res) => {
                     newOwner = c.user._id ? c.user._id : c.user;
                 }
             });
+            
+            const oldOwner = matchedZone.owner;
             matchedZone.owner = newOwner;
             await matchedZone.save();
             
-            // Also update user's total area if they just became owner and weren't before
-            // Note: actual area aggregation should ideally run as a separate service, but this is simple logic
+            // Update areas if owner changed
+            if (newOwner && oldOwner && oldOwner.toString() !== newOwner.toString()) {
+                // Decrement old owner
+                await User.findByIdAndUpdate(oldOwner, { $inc: { totalArea: -matchedZone.area } });
+                // Increment new owner
+                await User.findByIdAndUpdate(newOwner, { $inc: { totalArea: matchedZone.area } });
+            } else if (newOwner && !oldOwner) {
+                // Previously unclaimed, now claimed
+                await User.findByIdAndUpdate(newOwner, { $inc: { totalArea: matchedZone.area } });
+            }
 
             res.json({ message: 'Contested existing territory', zone: matchedZone, isNew: false });
         } else {
