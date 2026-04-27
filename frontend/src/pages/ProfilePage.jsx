@@ -190,7 +190,7 @@ export default function ProfilePage() {
                                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-200 to-amber-500 border-4 border-amber-100 flex items-center justify-center shadow-inner">
                                         <Trophy className="text-white" size={24} />
                                     </div>
-                                    <span className="text-[10px] font-bold text-brand-ink uppercase leading-tight">{ach.replace('_', ' ')}</span>
+                                    <span className="text-[10px] font-bold text-brand-ink dark:text-dark-text uppercase leading-tight">{ach.replace('_', ' ')}</span>
                                 </div>
                             ))
                         ) : (
