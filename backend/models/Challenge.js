@@ -25,6 +25,10 @@ const challengeSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
+        fitCoinsReward: {
+            type: Number,
+            default: 0,
+        },
         isActive: {
             type: Boolean,
             default: true,

@@ -70,6 +70,56 @@ async function calculateWarScores(war) {
     return { challenger: challengerScores, defender: defenderScores };
 }
 
+// ── Helper: Distribute FitCoins for completed war ──
+async function distributeWarRewards(war) {
+    if (!war.winner) return; // No rewards on a tie
+    
+    const isChallengerWinner = war.winner.toString() === war.challengerClan._id.toString();
+    const winningMembersIds = isChallengerWinner ? war.challengerMembers : war.defenderMembers;
+    
+    if (!winningMembersIds || winningMembersIds.length === 0) return;
+
+    const start = war.startsAt;
+    const end = war.endsAt;
+
+    const territories = await Territory.find({
+        'counts.user': { $in: winningMembersIds },
+        'counts.lastRunAt': { $gte: start, $lte: end },
+    });
+
+    const territoryCounts = {};
+    winningMembersIds.forEach(id => {
+        territoryCounts[id.toString()] = 0;
+    });
+
+    territories.forEach(zone => {
+        zone.counts.forEach(c => {
+            const userId = c.user._id ? c.user._id.toString() : c.user.toString();
+            if (territoryCounts[userId] !== undefined && c.lastRunAt >= start && c.lastRunAt <= end) {
+                territoryCounts[userId]++;
+            }
+        });
+    });
+
+    let topMemberId = null;
+    let maxTerritories = -1;
+
+    for (const [userId, count] of Object.entries(territoryCounts)) {
+        if (count > maxTerritories) {
+            maxTerritories = count;
+            topMemberId = userId;
+        }
+    }
+
+    for (const memberId of winningMembersIds) {
+        let reward = 200;
+        if (memberId.toString() === topMemberId) {
+            reward += 500;
+        }
+        await User.findByIdAndUpdate(memberId, { $inc: { fitCoins: reward } });
+    }
+}
+
 // ── Helper: check if clan has an active/pending/proposed war ──
 async function clanHasActiveWar(clanId) {
     const existing = await ClanWar.findOne({
@@ -304,6 +354,7 @@ router.get('/active', auth, async (req, res) => {
             }
             war.status = 'completed';
             await war.save();
+            await distributeWarRewards(war);
         }
 
         // If active, include live scores
@@ -377,6 +428,7 @@ router.get('/:warId', auth, async (req, res) => {
                 }
                 war.status = 'completed';
                 await war.save();
+                await distributeWarRewards(war);
                 await war.populate('winner', 'name');
             } else {
                 const liveScores = await calculateWarScores(war);

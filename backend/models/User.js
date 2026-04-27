@@ -51,6 +51,10 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        fitCoins: {
+            type: Number,
+            default: 0,
+        },
         // ── Achievements & Challenges ──
         achievements: {
             type: [String], // ["first_run", "5k_conqueror", "10_runs", ...]

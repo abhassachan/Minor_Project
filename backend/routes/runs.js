@@ -118,6 +118,7 @@ router.post('/', async (req, res) => {
                 if (progress >= challenge.targetValue) {
                     user.completedChallenges.push(challenge._id);
                     user.weeklyXP = (user.weeklyXP || 0) + challenge.xpReward;
+                    user.fitCoins = (user.fitCoins || 0) + (challenge.fitCoinsReward || 0);
                     completedDynamic.push(challenge.title);
                 }
             }

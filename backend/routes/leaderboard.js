@@ -39,6 +39,34 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
+// ── GET /api/leaderboard/weekly-rewards — Complete new weekly leaderboard for FitCoins ──
+router.get('/weekly-rewards', auth, async (req, res) => {
+    try {
+        // Global weekly leaderboard sorted by weeklyXP
+        const users = await User.find()
+            .select('name username weeklyXP league profilePic fitCoins')
+            .sort({ weeklyXP: -1 })
+            .limit(100);
+
+        const rankings = users.map((u, i) => ({
+            rank: i + 1,
+            _id: u._id,
+            name: u.name || 'Unknown',
+            username: u.username || '',
+            weeklyXP: u.weeklyXP || 0,
+            fitCoins: u.fitCoins || 0,
+            league: u.league?.name || 'Bronze',
+            profilePic: u.profilePic || '',
+            isYou: u._id.toString() === req.userId,
+            potentialReward: i === 0 ? 500 : 0 // Top player gets 500
+        }));
+
+        res.json({ rankings });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch weekly rewards leaderboard' });
+    }
+});
+
 // Helper: Haversine distance
 function haversineDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3;
