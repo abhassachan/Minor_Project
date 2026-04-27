@@ -30,6 +30,8 @@ export default function LeaderboardPage() {
                     return;
                 }
                 endpoint = `${API_BASE}/clans/${userClanId}/leaderboard`;
+            } else if (tab === 'weekly-rewards') {
+                endpoint = `${API_BASE}/leaderboard/weekly-rewards`;
             } else {
                 endpoint = `${API_BASE}/leaderboard/${tab}?tab=${sortBy}`;
             }
@@ -50,6 +52,14 @@ export default function LeaderboardPage() {
                     .sort((a, b) => b.score - a.score)
                     .map((item, index) => ({ ...item, rank: index + 1 }));
                 setRankings(sorted);
+            } else if (tab === 'weekly-rewards') {
+                const items = (data.rankings || []).map(r => ({
+                    user: { _id: r._id || r.rank, name: r.name, username: r.username, league: { name: r.league || 'Bronze' }, city: r.city },
+                    score: r.weeklyXP || 0,
+                    potentialReward: r.potentialReward || 0,
+                    rank: r.rank,
+                }));
+                setRankings(items);
             } else {
                 const items = (data.rankings || []).map(r => ({
                     user: { _id: r._id || r.rank, name: r.name, username: r.username, league: { name: r.league || 'Bronze' }, city: r.city },
@@ -98,7 +108,8 @@ export default function LeaderboardPage() {
                     {[
                         { id: 'global', icon: Globe, label: 'Global' },
                         { id: 'local', icon: MapPin, label: 'Local' },
-                        { id: 'clan', icon: Users, label: 'My Clan' }
+                        { id: 'clan', icon: Users, label: 'My Clan' },
+                        { id: 'weekly-rewards', icon: Trophy, label: 'Rewards' }
                     ].map(t => (
                         <button key={t.id} onClick={() => setTab(t.id)}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-bold transition-all duration-300 ${
@@ -113,6 +124,7 @@ export default function LeaderboardPage() {
 
             <div className="px-5 mt-6">
                 {/* Secondary Filters */}
+                {tab !== 'weekly-rewards' && (
                 <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                     {[
                         { id: 'distance', icon: Route, label: 'Total Distance', unit: 'km' },
@@ -130,6 +142,18 @@ export default function LeaderboardPage() {
                         </button>
                     ))}
                 </div>
+                )}
+
+                {/* Rewards Header Banner */}
+                {tab === 'weekly-rewards' && (
+                    <div className="mb-6 bg-amber-400 text-amber-950 p-4 rounded-2xl shadow-sm border border-amber-300">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-lg flex items-center gap-2"><Trophy size={20} /> Weekly FitCoin Race</h3>
+                            <span className="text-xs font-bold bg-amber-950/10 px-2 py-1 rounded">Ends Sunday 23:59</span>
+                        </div>
+                        <p className="text-sm opacity-90">The top runner by Week XP will receive <span className="font-black">500 FitCoins</span>. Run hard to climb the ranks!</p>
+                    </div>
+                )}
 
                 {/* No clan state */}
                 {tab === 'clan' && !userClanId && (
@@ -185,11 +209,16 @@ export default function LeaderboardPage() {
                                     {/* Score */}
                                     <div className="text-right">
                                         <div className="font-mono text-lg font-bold text-brand-teal">
-                                            {sortBy === 'distance' ? r.score?.toFixed(1) || '0' : r.score || '0'}
+                                            {tab === 'weekly-rewards' ? r.score : (sortBy === 'distance' ? r.score?.toFixed(1) || '0' : r.score || '0')}
                                         </div>
                                         <div className="text-[10px] text-brand-muted dark:text-dark-muted uppercase font-bold tracking-wider">
-                                            {sortBy === 'distance' ? 'km' : sortBy === 'area' ? 'm²' : 'loops'}
+                                            {tab === 'weekly-rewards' ? 'Week XP' : (sortBy === 'distance' ? 'km' : sortBy === 'area' ? 'm²' : 'loops')}
                                         </div>
+                                        {tab === 'weekly-rewards' && r.potentialReward > 0 && (
+                                            <div className="text-[10px] bg-amber-400 text-amber-950 px-2 py-0.5 rounded-full font-bold mt-1 inline-block whitespace-nowrap shadow-sm">
+                                                +{r.potentialReward} FitCoins
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );

@@ -132,6 +132,23 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
+                {/* FitCoins Section */}
+                <div className="bg-gradient-to-r from-brand-teal to-brand-teal-dark text-white p-5 rounded-[2rem] shadow-lg mt-4 flex items-center justify-between transition-transform duration-300 hover:scale-[1.02]">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                            <Trophy size={24} className="text-amber-300" />
+                        </div>
+                        <div>
+                            <h3 className="font-heading font-black text-xl">FitCoins</h3>
+                            <p className="text-white/80 text-xs font-bold uppercase tracking-wider">Rewards Balance</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="font-mono text-3xl font-black">{user.fitCoins || 0}</div>
+                        <p className="text-[10px] text-white/60 font-bold tracking-widest mt-1">REDEEM SOON</p>
+                    </div>
+                </div>
+
                 {/* Achievements Section */}
                 <div className="bg-white dark:bg-dark-surface p-5 rounded-[2rem] shadow-sm dark:shadow-black/20 border border-brand-border dark:border-dark-border mt-4 transition-colors duration-300">
                     <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
