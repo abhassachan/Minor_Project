@@ -102,7 +102,7 @@ export default function LandingPage() {
             {/* NAVBAR */}
             <nav className="fixed top-0 left-0 right-0 z-50 glass-nav h-20 flex items-center">
                 <div className="container mx-auto px-6 flex justify-between items-center">
-                    <Link to="/" className="flex items-center gap-1 text-2xl font-heading tracking-tight">
+                    <Link to="/" className="flex items-center text-2xl font-heading tracking-tight">
                         <span className="text-brand-teal font-black">C</span><span className="text-brand-ink dark:text-dark-text">ONQU</span><span className="text-brand-teal font-black">R</span>
                     </Link>
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-wider">
@@ -282,7 +282,7 @@ export default function LandingPage() {
             {/* FOOTER */}
             <footer className="bg-brand-ink border-t border-white/5 py-8 px-6">
                 <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-1 text-xl font-heading">
+                    <div className="flex items-center text-xl font-heading">
                         <span className="text-brand-teal font-black">C</span><span className="text-white">ONQU</span><span className="text-brand-teal font-black">R</span>
                     </div>
                     <p className="text-brand-muted text-sm">© 2025 CONQUR. All rights reserved.</p>

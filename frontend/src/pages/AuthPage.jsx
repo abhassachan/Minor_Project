@@ -85,7 +85,7 @@ export default function AuthPage() {
                     <div className="absolute right-0 top-0">
                         <ThemeToggle />
                     </div>
-                    <Link to="/" className="inline-flex items-center gap-1 text-3xl font-heading tracking-tight">
+                    <Link to="/" className="inline-flex items-center text-3xl font-heading tracking-tight">
                         <span className="text-brand-teal font-black">C</span><span className="text-brand-ink dark:text-dark-text">ONQU</span><span className="text-brand-teal font-black">R</span>
                     </Link>
                 </div>
