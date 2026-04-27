@@ -3,6 +3,10 @@
 ## Project Overview
 **CONQUR** is a GPS-enabled gamified running Progressive Web Application (PWA) that transforms outdoor running into an engaging and competitive experience. The system tracks user movement in real-time and allows users to claim virtual territories based on their running routes, participate in clan wars, and complete dynamic global challenges.
 
+## Live Links
+- **Frontend App:** https://conqurr.vercel.app/
+- **Backend API:** https://territory-run-api.onrender.com
+
 ## Team Members
 - Abhas Sachan (2023BTECH003)  
 - Ayush Sharma (2023BTECH021)
