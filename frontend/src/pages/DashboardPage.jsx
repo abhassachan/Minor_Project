@@ -131,8 +131,7 @@ export default function DashboardPage() {
             <nav className="sticky top-0 z-50 glass-nav h-16 flex items-center px-6">
                 <div className="w-full flex justify-between items-center">
                     <Link to="/" className="flex items-center gap-1 text-xl font-heading tracking-tight">
-                        <span className="text-brand-ink dark:text-dark-text">TERRITORY</span>
-                        <span className="text-brand-teal">RUN</span>
+                        <span className="text-brand-teal font-black">C</span><span className="text-brand-ink dark:text-dark-text">ONQU</span><span className="text-brand-teal font-black">R</span>
                     </Link>
                     <div className="flex items-center gap-3">
                         <ThemeToggle />

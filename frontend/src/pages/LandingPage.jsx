@@ -103,8 +103,7 @@ export default function LandingPage() {
             <nav className="fixed top-0 left-0 right-0 z-50 glass-nav h-20 flex items-center">
                 <div className="container mx-auto px-6 flex justify-between items-center">
                     <Link to="/" className="flex items-center gap-1 text-2xl font-heading tracking-tight">
-                        <span className="text-brand-ink dark:text-dark-text">TERRITORY</span>
-                        <span className="text-brand-teal">RUN</span>
+                        <span className="text-brand-teal font-black">C</span><span className="text-brand-ink dark:text-dark-text">ONQU</span><span className="text-brand-teal font-black">R</span>
                     </Link>
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-wider">
                         <a className="hover:text-brand-teal transition-colors" href="#how-it-works">How it Works</a>
@@ -127,7 +126,7 @@ export default function LandingPage() {
                 <div className="container mx-auto grid lg:grid-cols-2 gap-16 items-center">
                     <div className="z-10 animate-fade-up">
                         <h1 className="hero-heading text-7xl md:text-8xl lg:text-9xl font-heading text-brand-ink dark:text-dark-text mb-6">
-                            RUN.<br />CAPTURE.<br />DOMINATE.
+                            RUN.<br />CAPTURE.<br />CONQUER.
                         </h1>
                         <p className="text-xl text-brand-muted dark:text-dark-muted max-w-md mb-10 leading-relaxed">
                             The city is a board game. Claim map zones by running through them and become the local legend. No downloads, just running.
@@ -284,10 +283,9 @@ export default function LandingPage() {
             <footer className="bg-brand-ink border-t border-white/5 py-8 px-6">
                 <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-1 text-xl font-heading">
-                        <span className="text-white">TERRITORY</span>
-                        <span className="text-brand-teal">RUN</span>
+                        <span className="text-brand-teal font-black">C</span><span className="text-white">ONQU</span><span className="text-brand-teal font-black">R</span>
                     </div>
-                    <p className="text-brand-muted text-sm">© 2025 Territory Run. All rights reserved.</p>
+                    <p className="text-brand-muted text-sm">© 2025 CONQUR. All rights reserved.</p>
                     <div className="flex gap-6 text-brand-muted text-sm">
                         <a className="hover:text-white transition-colors" href="#">Privacy</a>
                         <a className="hover:text-white transition-colors" href="#">Terms</a>

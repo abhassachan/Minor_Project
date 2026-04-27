@@ -183,7 +183,7 @@ export default function ClanPage() {
 
     const shareInvite = async () => {
         const link = getInviteLink();
-        const text = `Join my clan "${clanData?.name}" on Territory Run! 🏃‍♂️\n\nUse code: ${clanData?.code}\nOr click: ${link}`;
+        const text = `Join my clan "${clanData?.name}" on CONQUR! 🏃‍♂️\n\nUse code: ${clanData?.code}\nOr click: ${link}`;
         
         if (navigator.share) {
             try {

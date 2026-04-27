@@ -207,7 +207,7 @@ export default function ProfilePage() {
                         <LogOut size={18} /> Sign Out
                     </button>
                     <div className="text-center mt-6 py-4">
-                         <p className="text-[10px] font-bold text-brand-muted dark:text-dark-muted uppercase tracking-widest">Territory Run v1.0.0</p>
+                         <p className="text-[10px] font-bold text-brand-muted dark:text-dark-muted uppercase tracking-widest">CONQUR v1.0.0</p>
                     </div>
                 </div>
 
