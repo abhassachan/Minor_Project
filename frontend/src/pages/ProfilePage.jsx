@@ -14,7 +14,35 @@ export default function ProfilePage() {
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
         setUser(storedUser);
-    }, []);
+
+        // Fetch fresh data from backend
+        const fetchProfile = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                
+                const res = await fetch(`${API_BASE}/profile`, {
+                    // Try Authorization header first, fallback to x-auth-token based on existing code
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'x-auth-token': token
+                    }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user) {
+                        setUser(data.user);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch latest profile:', err);
+            }
+        };
+        
+        fetchProfile();
+    }, [API_BASE]);
 
     const logout = () => {
         localStorage.removeItem('token');
