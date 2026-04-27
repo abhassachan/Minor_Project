@@ -140,10 +140,6 @@ export default function DashboardPage() {
                             className="bg-brand-teal text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition-all">
                             ▶ START RUN
                         </Link>
-                        <button className="relative">
-                            <span className="text-xl">🔔</span>
-                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-danger rounded-full border border-white dark:border-dark-surface"></span>
-                        </button>
                         <Link to="/profile" className="w-[34px] h-[34px] rounded-full orange-gradient border-2 border-brand-teal flex items-center justify-center text-[11px] font-bold text-white shadow-sm cursor-pointer hover:scale-110 transition-transform">
                             {initials}
                         </Link>
