@@ -144,9 +144,9 @@ export default function DashboardPage() {
                             <span className="text-xl">🔔</span>
                             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-danger rounded-full border border-white dark:border-dark-surface"></span>
                         </button>
-                        <div className="w-[34px] h-[34px] rounded-full orange-gradient border-2 border-brand-teal flex items-center justify-center text-[11px] font-bold text-white shadow-sm">
+                        <Link to="/profile" className="w-[34px] h-[34px] rounded-full orange-gradient border-2 border-brand-teal flex items-center justify-center text-[11px] font-bold text-white shadow-sm cursor-pointer hover:scale-110 transition-transform">
                             {initials}
-                        </div>
+                        </Link>
                     </div>
                 </div>
             </nav>
