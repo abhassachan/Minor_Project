@@ -31,7 +31,7 @@ app.use('/api/challenges', require('./routes/challenges'));
 
 // ── Health check ─────────────────────────────────────
 app.get('/', (req, res) => {
-    res.json({ status: 'Territory Run API is running 🏃' });
+    res.json({ status: 'CONQUR API is running 🏃' });
 });
 
 // ── Cron Jobs ────────────────────────────────────────
