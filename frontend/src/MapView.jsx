@@ -27,14 +27,20 @@ const LOOP_CLOSE_THRESHOLD = 35
 const LOOP_MIN_POINTS = 20
 const LOOP_MIN_DISTANCE = 100
 
+const CARTO_KEY = import.meta.env.VITE_CARTO_API_KEY
+
 const TILES = {
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    url: CARTO_KEY
+      ? `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
+      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: CARTO_KEY
+      ? '&copy; <a href="https://carto.com/">CARTO</a>'
+      : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
   light: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap contributors',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
 }
 
@@ -582,9 +588,9 @@ export default function MapView() {
       </div>
 
       {/* ── MAP ── */}
-      <div style={{ height: 'calc(100vh - 64px)', width: '100%', position: 'relative' }}>
+      <div className={isDarkMap && !CARTO_KEY ? 'dark-map' : ''} style={{ height: 'calc(100vh - 64px)', width: '100%', position: 'relative' }}>
         <MapContainer center={position} zoom={16} style={{ height: '100%', width: '100%' }}>
-          <TileLayer key={isDarkMap ? 'dark' : 'light'} url={tile.url} attribution={tile.attribution} />
+          <TileLayer key={isDarkMap ? (CARTO_KEY ? 'carto-dark' : 'osm-dark') : 'osm-light'} url={tile.url} attribution={tile.attribution} />
           <RecenterMap position={position} isRunning={isRunning} />
           <Marker position={position} icon={blueDotIcon} />
 
