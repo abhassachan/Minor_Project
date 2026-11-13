@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- PWA: viewport — critical for mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- PWA: manifest link — browser reads this to decide installability -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Standard Favicon -->
+  <link rel="icon" type="image/png" href="/appicon.png" />
+
+  <!-- PWA: theme color (Android Chrome address bar color) -->
+  <meta name="theme-color" content="#22c55e" />
+
+  <!-- PWA: iOS Safari specific tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RunTracker" />
+
+  <!-- PWA: iOS icons (required for iOS home screen icon) -->
+  <link rel="apple-touch-icon" sizes="192x192" href="/appicon.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="/appicon.png" />
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap"
+    rel="stylesheet" />
+
+  <!-- App title -->
+  <title>CONQUR | Run. Capture. Conquer.</title>
+  <script type="module" crossorigin src="/assets/index-BmVawPW2.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DFbKBez5.css">
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- Register service worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('SW registered:', reg.scope))
+          .catch((err) => console.error('SW registration failed:', err))
+      })
+    }
+  </script>
+
+</body>
+
+</html>
