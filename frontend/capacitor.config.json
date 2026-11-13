@@ -1,0 +1,14 @@
+{
+  "appId": "com.conqur.app",
+  "appName": "CONQUR",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0f172a"
+    }
+  }
+}
