@@ -6,7 +6,7 @@ import {
 } from 'react-leaflet'
 import { fetchAllTerritories, fetchClanTerritories, syncPendingTerritories } from './territoriesAPI'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'https://territory-run-api.onrender.com/api'
 
 // Blue pulsing location dot icon
 const blueDotIcon = L.divIcon({

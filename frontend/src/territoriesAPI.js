@@ -1,6 +1,6 @@
 // territoriesAPI.js — handles all territory sync logic
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'https://territory-run-api.onrender.com/api'
 
 /**
  * Normalize a backend zone into the shape the frontend expects:

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Swords, Search, Clock, Trophy, Shield, Users, ChevronLeft, Send, CheckCircle, XCircle, Loader2, Flame, Target, Footprints } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL || 'https://territory-run-api.onrender.com/api';
 const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 export default function ClanWarsPage() {

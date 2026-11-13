@@ -9,7 +9,7 @@ export default function ProfilePage() {
     const [editUsername, setEditUsername] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const navigate = useNavigate();
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const API_BASE = import.meta.env.VITE_API_URL || 'https://territory-run-api.onrender.com/api';
 
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');

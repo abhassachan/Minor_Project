@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, MessageCircle, X, CheckCheck } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://territory-run-api.onrender.com/api';
 
 export default function ClanChat({ clanId, currentUserId }) {
     const [messages, setMessages] = useState([]);

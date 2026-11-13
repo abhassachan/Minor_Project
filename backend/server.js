@@ -8,12 +8,23 @@ dotenv.config();
 const app = express();
 
 // ── Middleware ────────────────────────────────────────
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://localhost',
+    'capacitor://localhost',
+    'http://localhost',
+    'https://conqurr.vercel.app',
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-    origin: [
-        'http://localhost:5173',             // Vite local dev
-        'http://localhost:3000',             // alt local dev
-        process.env.FRONTEND_URL             // production Vercel URL
-    ].filter(Boolean),
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
     credentials: true
 }));
 app.use(express.json());
