@@ -39,13 +39,13 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Sync Capacitor Android Project
+      - name: Copy Web Assets into Android Project
         working-directory: frontend
-        run: npx cap sync android
+        run: npx cap copy android
 
       - name: Build Debug APK with Gradle
         working-directory: frontend/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4
