@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Build Web Production Assets
         working-directory: frontend
@@ -43,7 +43,7 @@ jobs:
         working-directory: frontend
         run: |
           mkdir -p android/app/src/main/assets/public
-          npx cap copy android
+          npm run cap:copy -- --verbose
 
       - name: Build Debug APK with Gradle
         working-directory: frontend/android

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
-    "cap:ios": "cap open ios"
+    "cap:ios": "cap open ios",
+    "cap:copy": "cap copy android"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -27,10 +28,10 @@
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.13.1",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.2.1",
+    "@capacitor/cli": "^8.6.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.6.2",
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
