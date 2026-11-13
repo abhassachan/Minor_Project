@@ -19,13 +19,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          items: |
-            platforms;android-36
-            build-tools;36.0.0
+          cache: 'gradle'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,16 +40,13 @@ jobs:
         working-directory: frontend
         run: npx cap sync android
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
       - name: Make Gradle Wrapper Executable
         working-directory: frontend/android
         run: chmod +x gradlew
 
       - name: Build Debug APK with Gradle
         working-directory: frontend/android
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4
