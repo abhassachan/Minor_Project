@@ -41,7 +41,9 @@ jobs:
 
       - name: Copy Web Assets into Android Project
         working-directory: frontend
-        run: npx cap copy android
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          npx cap copy android
 
       - name: Build Debug APK with Gradle
         working-directory: frontend/android
